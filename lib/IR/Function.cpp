@@ -446,7 +446,8 @@ enum IIT_Info {
   IIT_STRUCT5 = 22,
   IIT_EXTEND_VEC_ARG = 23,
   IIT_TRUNC_VEC_ARG = 24,
-  IIT_ANYPTR = 25
+  IIT_ANYPTR = 25,
+  IIT_IFATPTR = 26
 };
 
 
@@ -517,6 +518,12 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_ANYPTR: {  // [ANYPTR addrspace, subtype]
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer,
                                              Infos[NextElt++]));
+    DecodeIITType(NextElt, Infos, OutputTable);
+    return;
+  }
+  case IIT_IFATPTR: {
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 
+                                             200));
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   }

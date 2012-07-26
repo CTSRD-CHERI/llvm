@@ -118,8 +118,9 @@ namespace llvm {
       Untyped        =  53,   // This value takes a register, but has
                               // unspecified type.  The register class
                               // will be determined by the opcode.
+      iFATPTR        =  54,
 
-      LAST_VALUETYPE =  54,   // This always remains at the end of the list.
+      LAST_VALUETYPE =  55,   // This always remains at the end of the list.
 
       // This is the current maximum for LAST_VALUETYPE.
       // MVT::MAX_ALLOWED_VALUETYPE is used for asserts and to size bit vectors
@@ -359,6 +360,7 @@ namespace llvm {
         llvm_unreachable("Value type is overloaded.");
       case Metadata:
         llvm_unreachable("Value type is metadata.");
+      case iFATPTR: return 256;
       case i1  :  return 1;
       case v2i1:  return 2;
       case v4i1:  return 4;
@@ -554,7 +556,7 @@ namespace llvm {
   /// native for any processor (such as the i12345 type), as well as the types
   /// a MVT can represent.
   struct EVT {
-  private:
+  //private:
     MVT V;
     Type *LLVMTy;
 

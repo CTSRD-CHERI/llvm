@@ -260,7 +260,8 @@ enum IIT_Info {
   IIT_STRUCT5 = 22,
   IIT_EXTEND_VEC_ARG = 23,
   IIT_TRUNC_VEC_ARG = 24,
-  IIT_ANYPTR = 25
+  IIT_ANYPTR = 25,
+  IIT_IFATPTR = 25
 };
 
 
@@ -281,6 +282,7 @@ static void EncodeFixedValueType(MVT::SimpleValueType VT,
   switch (VT) {
   default: PrintFatalError("unhandled MVT in intrinsic!");
   case MVT::f16: return Sig.push_back(IIT_F16);
+  case MVT::iFATPTR: return Sig.push_back(IIT_IFATPTR);
   case MVT::f32: return Sig.push_back(IIT_F32);
   case MVT::f64: return Sig.push_back(IIT_F64);
   case MVT::Metadata: return Sig.push_back(IIT_METADATA);
@@ -342,6 +344,10 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
     } else {
       Sig.push_back(IIT_PTR);
     }
+    return EncodeFixedType(R->getValueAsDef("ElTy"), ArgCodes, Sig);
+  }
+  case MVT::iFATPTR: {
+    Sig.push_back(IIT_IFATPTR);
     return EncodeFixedType(R->getValueAsDef("ElTy"), ArgCodes, Sig);
   }
   }

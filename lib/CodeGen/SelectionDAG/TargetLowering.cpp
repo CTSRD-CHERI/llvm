@@ -2151,6 +2151,8 @@ TargetLowering::AsmOperandInfoVector TargetLowering::ParseConstraints(
       } else if (PointerType *PT = dyn_cast<PointerType>(OpTy)) {
         OpInfo.ConstraintVT = MVT::getIntegerVT(
             8*getDataLayout()->getPointerSize(PT->getAddressSpace()));
+      } else if (PointerType *PTy = dyn_cast<PointerType>(OpTy)) {
+        OpInfo.ConstraintVT = MVT::getIntegerVT(8*TD->getPointerSize(PTy->getAddressSpace()));
       } else {
         OpInfo.ConstraintVT = MVT::getVT(OpTy, true);
       }
