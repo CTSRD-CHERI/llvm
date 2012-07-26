@@ -116,6 +116,9 @@ protected:
   // HasMSA -- supports MSA ASE.
   bool HasMSA;
 
+  /// IsCheri - Supports the CHERI capability extensions
+  bool IsCheri;
+
   InstrItineraryData InstrItins;
 
   // The instance to the register info section object
@@ -189,6 +192,7 @@ public:
   bool hasMSA() const { return HasMSA; }
   bool isLinux() const { return IsLinux; }
   bool useSmallSection() const { return UseSmallSection; }
+  bool isCheri() const { return IsCheri; }
 
   bool hasStandardEncoding() const { return !inMips16Mode(); }
 

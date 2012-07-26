@@ -69,6 +69,8 @@ static std::string ParseMipsTriple(StringRef TT, StringRef CPU) {
         MipsArchFeature = "+mips64";
       } else if (CPU == "mips64r2") {
         MipsArchFeature = "+mips64r2";
+      } else if (CPU == "cheri") {
+        MipsArchFeature = "+cheri+soft-float";
       }
   }
   return MipsArchFeature;
@@ -218,6 +220,7 @@ extern "C" void LLVMInitializeMipsTargetMC() {
   RegisterMCAsmInfoFn Y(TheMipselTarget, createMipsMCAsmInfo);
   RegisterMCAsmInfoFn A(TheMips64Target, createMipsMCAsmInfo);
   RegisterMCAsmInfoFn B(TheMips64elTarget, createMipsMCAsmInfo);
+  RegisterMCAsmInfoFn C(TheMipsCheriTarget, createMipsMCAsmInfo);
 
   // Register the MC codegen info.
   TargetRegistry::RegisterMCCodeGenInfo(TheMipsTarget,
@@ -228,6 +231,8 @@ extern "C" void LLVMInitializeMipsTargetMC() {
                                         createMipsMCCodeGenInfo);
   TargetRegistry::RegisterMCCodeGenInfo(TheMips64elTarget,
                                         createMipsMCCodeGenInfo);
+  TargetRegistry::RegisterMCCodeGenInfo(TheMipsCheriTarget,
+                                        createMipsMCCodeGenInfo);
 
   // Register the MC instruction info.
   TargetRegistry::RegisterMCInstrInfo(TheMipsTarget, createMipsMCInstrInfo);
@@ -235,6 +240,7 @@ extern "C" void LLVMInitializeMipsTargetMC() {
   TargetRegistry::RegisterMCInstrInfo(TheMips64Target, createMipsMCInstrInfo);
   TargetRegistry::RegisterMCInstrInfo(TheMips64elTarget,
                                       createMipsMCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(TheMipsCheriTarget, createMipsMCInstrInfo);
 
   // Register the MC register info.
   TargetRegistry::RegisterMCRegInfo(TheMipsTarget, createMipsMCRegisterInfo);
@@ -242,6 +248,7 @@ extern "C" void LLVMInitializeMipsTargetMC() {
   TargetRegistry::RegisterMCRegInfo(TheMips64Target, createMipsMCRegisterInfo);
   TargetRegistry::RegisterMCRegInfo(TheMips64elTarget,
                                     createMipsMCRegisterInfo);
+  TargetRegistry::RegisterMCRegInfo(TheMipsCheriTarget, createMipsMCRegisterInfo);
 
   // Register the MC Code Emitter
   TargetRegistry::RegisterMCCodeEmitter(TheMipsTarget,
@@ -252,6 +259,8 @@ extern "C" void LLVMInitializeMipsTargetMC() {
                                         createMipsMCCodeEmitterEB);
   TargetRegistry::RegisterMCCodeEmitter(TheMips64elTarget,
                                         createMipsMCCodeEmitterEL);
+  TargetRegistry::RegisterMCCodeEmitter(TheMipsCheriTarget,
+                                        createMipsMCCodeEmitterEB);
 
   // Register the object streamer.
   TargetRegistry::RegisterMCObjectStreamer(TheMipsTarget, createMCStreamer);
@@ -259,6 +268,7 @@ extern "C" void LLVMInitializeMipsTargetMC() {
   TargetRegistry::RegisterMCObjectStreamer(TheMips64Target, createMCStreamer);
   TargetRegistry::RegisterMCObjectStreamer(TheMips64elTarget,
                                            createMCStreamer);
+  TargetRegistry::RegisterMCObjectStreamer(TheMipsCheriTarget, createMCStreamer);
 
   // Register the asm streamer.
   TargetRegistry::RegisterAsmStreamer(TheMipsTarget, createMCAsmStreamer);
@@ -275,6 +285,8 @@ extern "C" void LLVMInitializeMipsTargetMC() {
                                        createMipsAsmBackendEB64);
   TargetRegistry::RegisterMCAsmBackend(TheMips64elTarget,
                                        createMipsAsmBackendEL64);
+  TargetRegistry::RegisterMCAsmBackend(TheMipsCheriTarget,
+                                       createMipsAsmBackendEB64);
 
   // Register the MC subtarget info.
   TargetRegistry::RegisterMCSubtargetInfo(TheMipsTarget,
@@ -285,6 +297,8 @@ extern "C" void LLVMInitializeMipsTargetMC() {
                                           createMipsMCSubtargetInfo);
   TargetRegistry::RegisterMCSubtargetInfo(TheMips64elTarget,
                                           createMipsMCSubtargetInfo);
+  TargetRegistry::RegisterMCSubtargetInfo(TheMipsCheriTarget,
+                                          createMipsMCSubtargetInfo);
 
   // Register the MCInstPrinter.
   TargetRegistry::RegisterMCInstPrinter(TheMipsTarget,
@@ -294,5 +308,7 @@ extern "C" void LLVMInitializeMipsTargetMC() {
   TargetRegistry::RegisterMCInstPrinter(TheMips64Target,
                                         createMipsMCInstPrinter);
   TargetRegistry::RegisterMCInstPrinter(TheMips64elTarget,
+                                        createMipsMCInstPrinter);
+  TargetRegistry::RegisterMCInstPrinter(TheMipsCheriTarget,
                                         createMipsMCInstPrinter);
 }
