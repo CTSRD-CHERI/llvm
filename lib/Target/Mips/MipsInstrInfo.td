@@ -1386,19 +1386,20 @@ def simm11: Operand<i64>;
 def immSExt11  : PatLeaf<(imm), [{ return isInt<11>(N->getSExtValue()); }]>;
 // 8-bit immediate offset used by C[SL]C
 def simm8: Operand<i64>;
+
 def immSExt8  : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
 
 
 def CIncBase : CheriFmtSet<1, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
-                           "CIncBase\t$cd, $cb, $rt",
+                           "cincbase\t$cd, $cb, $rt",
                            [(set CheriRegs:$cd, (inttoptr (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb))))]>;
 
 def CGetBase : CheriFmtGet<1, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
-                           "CGetBase $rd, $cb",
+                           "cgetbase $rd, $cb",
                            [(set CPU64Regs:$rd, (ptrtoint CheriRegs:$cb))]>;
 
 def BC2F : CheriFmtBC2F<(outs), (ins CheriRegs:$cd, brtarget:$offset),
-                        "BC2F\t$cd, $offset",
+                        "bc2f\t$cd, $offset",
                         [(MipsBC2F CheriRegs:$cd, bb:$offset)]>;
 
 def CGetTag : CheriFmtGet<3, (outs CPURegs:$rd), (ins CheriRegs:$cb),
@@ -1525,13 +1526,13 @@ multiclass LoadViaCap0<Instruction Op, PatFrag loadType> {
 }
 
 
-defm CAPLOAD8      : LoadViaCap<0, 1, "CLB", CPURegs, sextloadi8>;
-defm CAPLOAD16     : LoadViaCap<1, 1, "CLH", CPURegs, sextloadi16_a>;
-defm CAPLOAD32     : LoadViaCap<2, 1, "CLW", CPURegs, load_a>;
-defm CAPLOAD64     : LoadViaCap<3, 1, "CLD", CPU64Regs, load_a>;
+defm CAPLOAD8      : LoadViaCap<0, 1, "clb", CPURegs, sextloadi8>;
+defm CAPLOAD16     : LoadViaCap<1, 1, "clh", CPURegs, sextloadi16_a>;
+defm CAPLOAD32     : LoadViaCap<2, 1, "clw", CPURegs, load_a>;
+defm CAPLOAD64     : LoadViaCap<3, 1, "cld", CPU64Regs, load_a>;
 
-defm CAPLOADU8     : LoadViaCap<0, 0, "CLBU", CPURegs, extloadi8>;
-defm CAPLOADU16    : LoadViaCap<1, 0, "CLHU", CPURegs, extloadi16_a>;
+defm CAPLOADU8     : LoadViaCap<0, 0, "clbu", CPURegs, extloadi8>;
+defm CAPLOADU16    : LoadViaCap<1, 0, "clhu", CPURegs, extloadi16_a>;
 
 defm CAP0LOADA8     : LoadViaCap0<CAPLOAD8, extloadi8>;
 defm CAP0LOADA16    : LoadViaCap0<CAPLOAD16, extloadi16_a>;
@@ -1560,10 +1561,10 @@ multiclass StoreViaCap0<Instruction Op, RegisterClass RC, PatFrag storeType> {
   def : Pat<(storeType RC:$rd, (add (ptrtoint CheriRegs:$cb), CPU64Regs:$rt)),
             (Op RC:$rd, CPU64Regs:$rt, (i64 0), CheriRegs:$cb)>;
 }
-defm CAPSTORE8      : StoreViaCap<0, 0, "CSB", CPURegs, truncstorei8>;
-defm CAPSTORE16     : StoreViaCap<1, 0, "CSH", CPURegs, truncstorei16>;
-defm CAPSTORE32     : StoreViaCap<2, 0, "CSW", CPURegs, store>;
-defm CAPSTORE64     : StoreViaCap<3, 0, "CSD", CPU64Regs, store>;
+defm CAPSTORE8      : StoreViaCap<0, 0, "csb", CPURegs, truncstorei8>;
+defm CAPSTORE16     : StoreViaCap<1, 0, "csh", CPURegs, truncstorei16>;
+defm CAPSTORE32     : StoreViaCap<2, 0, "csw", CPURegs, store>;
+defm CAPSTORE64     : StoreViaCap<3, 0, "csd", CPU64Regs, store>;
 
 defm CAP0STORE8     : StoreViaCap0<CAPSTORE8, CPURegs, truncstorei8>;
 defm CAP0STORE16    : StoreViaCap0<CAPSTORE16, CPURegs, truncstorei16>;

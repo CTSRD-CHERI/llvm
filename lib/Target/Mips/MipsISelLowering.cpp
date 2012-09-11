@@ -2831,6 +2831,7 @@ getConstraintType(const std::string &Constraint) const
       case 'c':
       case 'l':
       case 'x':
+      case 'C':
         return C_RegisterClass;
       case 'R':
         return C_Memory;
@@ -2982,6 +2983,13 @@ getRegForInlineAsmConstraint(const std::string &Constraint, MVT VT) const
         return std::make_pair(0U, &Mips::GPR32RegClass);
       if (VT == MVT::i64 && HasMips64)
         return std::make_pair(0U, &Mips::GPR64RegClass);
+      if (VT == MVT::iFATPTR)
+        return std::make_pair(0U, &Mips::CheriRegsRegClass);
+      // This will generate an error message
+      return std::make_pair(0u, static_cast<const TargetRegisterClass*>(0));
+    case 'C':
+      if (VT == MVT::iFATPTR)
+        return std::make_pair(0U, &Mips::CheriRegsRegClass);
       // This will generate an error message
       return std::make_pair(0u, static_cast<const TargetRegisterClass*>(0));
     case 'f':
