@@ -1390,11 +1390,11 @@ def simm8: Operand<i64>;
 def immSExt8  : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
 
 
-def CIncBase : CheriFmtSet<1, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
+def CIncBase : CheriFmtSet<2, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
                            "cincbase\t$cd, $cb, $rt",
                            [(set CheriRegs:$cd, (inttoptr (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb))))]>;
 
-def CGetBase : CheriFmtGet<1, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
+def CGetBase : CheriFmtGet<2, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
                            "cgetbase $rd, $cb",
                            [(set CPU64Regs:$rd, (ptrtoint CheriRegs:$cb))]>;
 
@@ -1402,7 +1402,7 @@ def BC2F : CheriFmtBC2F<(outs), (ins CheriRegs:$cd, brtarget:$offset),
                         "bc2f\t$cd, $offset",
                         [(MipsBC2F CheriRegs:$cd, bb:$offset)]>;
 
-def CGetTag : CheriFmtGet<3, (outs CPURegs:$rd), (ins CheriRegs:$cb),
+def CGetTag : CheriFmtGet<5, (outs CPURegs:$rd), (ins CheriRegs:$cb),
                           "CGetTag $rd, $cb",
                           [(set CPURegs:$rd, (int_cheri_get_cap_tag CheriRegs:$cb))]>;
 
@@ -1410,11 +1410,11 @@ def : Pat<(brcond (i32 (setne (int_cheri_get_cap_tag CheriRegs:$cd), (i32 0))), 
           (BC2F CheriRegs:$cd, imm:$offset)>;
 
 
-def CSetLength : CheriFmtSet<0, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
+def CSetLength : CheriFmtSet<3, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
                              "CSetLen\t$cd, $cb, $rt",
                              [(set CheriRegs:$cd, (int_cheri_set_cap_length CheriRegs:$cb, CPU64Regs:$rt))]>;
 
-def CGetLength : CheriFmtGet<0, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
+def CGetLength : CheriFmtGet<3, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
                              "CGetLength $rd, $cb",
                              [(set CPU64Regs:$rd, (int_cheri_get_cap_length CheriRegs:$cb))]>;
 
@@ -1458,19 +1458,19 @@ let usesCustomInserter = 1 in {
              [(int_cheri_set_cap_reg imm:$RegNo, CheriRegs: $rd)]>;
 }
 
-def CAndPerm : CheriFmtSet<6, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
+def CAndPerm : CheriFmtSet<0, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
                            "CAndPerm\t$cd, $cb, $rt",
                            [(set CheriRegs:$cd, (int_cheri_and_cap_perms CheriRegs:$cb, CPU64Regs:$rt))]>;
 
-def CGetPerm : CheriFmtGet<6, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
+def CGetPerm : CheriFmtGet<0, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
                            "CGetPerm $rd, $cb",
                            [(set CPU64Regs:$rd, (int_cheri_get_cap_perms CheriRegs:$cb))]>;
 
-def CSetType : CheriFmtSet<2, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
+def CSetType : CheriFmtSet<1, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
                            "CSetType\t$cd, $cb, $rt",
                            [(set CheriRegs:$cd, (int_cheri_set_cap_type CheriRegs:$cb, CPU64Regs:$rt))]>;
 
-def CGetType : CheriFmtGet<2, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
+def CGetType : CheriFmtGet<1, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
                            "CGetType $rd, $cb",
                            [(set CPU64Regs:$rd, (int_cheri_get_cap_type CheriRegs:$cb))]>;
 
