@@ -1392,7 +1392,9 @@ def immSExt8  : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
 
 def CIncBase : CheriFmtSet<2, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
                            "cincbase\t$cd, $cb, $rt",
-                           [(set CheriRegs:$cd, (inttoptr (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb))))]>;
+                           [(set CheriRegs:$cd, (inttoptr (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb))))]> {
+  let hasSideEffects = 1;
+}
 
 def CGetBase : CheriFmtGet<2, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
                            "cgetbase $rd, $cb",
@@ -1412,7 +1414,9 @@ def : Pat<(brcond (i32 (setne (int_cheri_get_cap_tag CheriRegs:$cd), (i32 0))), 
 
 def CSetLength : CheriFmtSet<3, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
                              "CSetLen\t$cd, $cb, $rt",
-                             [(set CheriRegs:$cd, (int_cheri_set_cap_length CheriRegs:$cb, CPU64Regs:$rt))]>;
+                             [(set CheriRegs:$cd, (int_cheri_set_cap_length CheriRegs:$cb, CPU64Regs:$rt))]> {
+  let hasSideEffects = 1;
+}
 
 def CGetLength : CheriFmtGet<3, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
                              "CGetLength $rd, $cb",
