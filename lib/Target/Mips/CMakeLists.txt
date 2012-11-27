@@ -45,6 +45,8 @@ add_llvm_target(MipsCodeGen
   MipsTargetMachine.cpp
   MipsTargetObjectFile.cpp
   MipsSelectionDAGInfo.cpp
+  CheriStackInvalidatePass.cpp
+  CheriRangeChecker.cpp
   )
 
 add_dependencies(LLVMMipsCodeGen MipsCommonTableGen intrinsics_gen)

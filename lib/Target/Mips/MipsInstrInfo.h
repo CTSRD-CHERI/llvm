@@ -120,6 +120,7 @@ public:
 protected:
   bool isZeroImm(const MachineOperand &op) const;
 
+public:
   MachineMemOperand *GetMemOperand(MachineBasicBlock &MBB, int FI,
                                    unsigned Flag) const;
 
