@@ -156,6 +156,14 @@ public:
   }
 
   virtual void addIRPasses();
+
+  virtual bool addPostRegAlloc() {
+    MipsTargetMachine &TM = getMipsTargetMachine();
+    if (TM.getSubtargetImpl()->isCheri())
+      addPass(createCheriInvalidatePass(TM));
+    return true;
+  }
+
   virtual bool addInstSelector();
   virtual bool addPreEmitPass();
 };
@@ -171,6 +179,8 @@ void MipsPassConfig::addIRPasses() {
     addPass(createMipsOs16(getMipsTargetMachine()));
   if (getMipsSubtarget().inMips16HardFloat())
     addPass(createMips16HardFloat(getMipsTargetMachine()));
+  if (getMipsSubtarget()->isCheri())
+    addPass(createCheriRangeChecker());
   addPass(createPartiallyInlineLibCallsPass());
 }
 // Install an instruction selector pass using
