@@ -10,7 +10,7 @@
 #include "llvm/Pass.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CallSite.h"
-#include "llvm/Support/InstVisitor.h"
+#include "llvm/InstVisitor.h"
 
 #include <string>
 #include <utility>
