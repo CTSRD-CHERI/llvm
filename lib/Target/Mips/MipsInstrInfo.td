@@ -1495,7 +1495,7 @@ def : Pat<(inttoptr CPU64Regs:$rt),
           (CIncBase C0, CPU64Regs:$rt)>;
 
 def STORECAP : CheriFmtCSCR<(outs), (ins CheriRegs:$cs, CPU64Regs:$rt, simm11:$offset, CheriRegs:$cb),
-                         "CSCR\t$cs, $rt+$offset($cb)",
+                         "CSCR\t$cs, ${rt}, ${offset}(${cb})",
                          [(store CheriRegs:$cs, (add (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset)))]>;
 
 def CLEARTAG : CheriFmtClearTag<(outs CheriRegs:$cd), (ins), "CClearTag\t$cd",
@@ -1506,7 +1506,7 @@ def : Pat<(store CheriRegs:$cs, CPU64Regs:$rt),
 
 // Load a capability
 def LOADCAP : CheriFmtCLCR<(outs CheriRegs:$cs), (ins CPU64Regs:$rt, simm11:$offset, CheriRegs:$cb),
-                        "CLCR\t$cs $rt+$offset($cb)",
+                        "CLCR\t$cs ${rt}, ${offset}(${cb})",
                         [(set CheriRegs:$cs, (load (add (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset))))]>;
 
 def : Pat<(load CPU64Regs:$rt),
@@ -1520,7 +1520,7 @@ multiclass LoadViaCap<bits<2> t, bit sExt, string instr_asm, RegisterClass RC, P
   def #NAME# : CheriFmtCLX<t, sExt,
                              (outs RC:$rd),
                              (ins CPU64Regs:$rt, simm8:$offset, CheriRegs:$cb),
-                             !strconcat(instr_asm, "\t$rd, $rt+$offset($cb)"),
+                             !strconcat(instr_asm, "\t$rd, ${rt}, ${offset}(${cb})"),
                            [(set RC:$rd, (loadType(add (add (ptrtoint CheriRegs:$cb), CPU64Regs:$rt), (i64 immSExt8:$offset))))]>;
 }
 
@@ -1531,9 +1531,9 @@ multiclass LoadViaCap0<Instruction Op, PatFrag loadType> {
 
 
 defm CAPLOAD8      : LoadViaCap<0, 1, "clb", CPURegs, sextloadi8>;
-defm CAPLOAD16     : LoadViaCap<1, 1, "clh", CPURegs, sextloadi16_a>;
-defm CAPLOAD32     : LoadViaCap<2, 1, "clw", CPURegs, load_a>;
-defm CAPLOAD64     : LoadViaCap<3, 1, "cld", CPU64Regs, load_a>;
+defm CAPLOAD16     : LoadViaCap<1, 1, "clh", CPURegs, sextloadi16>;
+defm CAPLOAD32     : LoadViaCap<2, 1, "clw", CPURegs, load>;
+defm CAPLOAD64     : LoadViaCap<3, 0, "cld", CPU64Regs, load>;
 
 defm CAPLOADU8     : LoadViaCap<0, 0, "clbu", CPURegs, extloadi8>;
 defm CAPLOADU16    : LoadViaCap<1, 0, "clhu", CPURegs, extloadi16_a>;
@@ -1556,7 +1556,7 @@ multiclass StoreViaCap<bits<2> t, bit e, string instr_asm, RegisterClass RC, Pat
   def #NAME# : CheriFmtCSX<t, e,
                              (outs),
                              (ins RC:$rs, CPU64Regs:$rt, simm8:$offset, CheriRegs:$cb),
-                             !strconcat(instr_asm, "\t$rs, $rt+$offset($cb)"),
+                             !strconcat(instr_asm, "\t$rs, ${rt}, ${offset}(${cb})"),
                            [(storeType (add (add (ptrtoint CheriRegs:$cb), CPU64Regs: $rt), (i64 immSExt8:$offset)), RC:$rs)]>;
 }
 multiclass StoreViaCap0<Instruction Op, RegisterClass RC, PatFrag storeType> {
