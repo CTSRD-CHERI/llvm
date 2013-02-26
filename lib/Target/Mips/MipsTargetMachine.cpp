@@ -67,8 +67,11 @@ MipsTargetMachine(const Target &T, StringRef TT,
                 "n32:64-S128" :
                 "e-p:32:32:32-i8:8:32-i16:16:32-i64:64:64-n32-S64") :
                (Subtarget.isABI_N64() ?
-                "E-p:64:64:64-i8:8:32-i16:16:32-i64:64:64-f128:128:128-"
-                "n32:64-S128" :
+                 (Subtarget.isCheri() ? 
+                  "E-p200:256:256:256-p:64:64:64-i8:8:32-i16:16:32-i64:64:64-"
+                    "f128:128:128-n32i:64-S64" :
+                  "E-p:64:64:64-i8:8:32-i16:16:32-i64:64:64-f128:128:128-"
+                  "n32:64-S128") :
                 "E-p:32:32:32-i8:8:32-i16:16:32-i64:64:64-n32-S64")),
     InstrInfo(MipsInstrInfo::create(*this)),
     FrameLowering(MipsFrameLowering::create(*this, Subtarget)),
