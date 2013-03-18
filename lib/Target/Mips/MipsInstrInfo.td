@@ -1456,13 +1456,13 @@ def : Pat<(brcond (i32 (setne (int_cheri_get_cap_tag CheriRegs:$cd), (i32 0))), 
 
 
 def CSetLength : CheriFmtSet<3, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
-                             "CSetLen\t$cd, $cb, $rt",
+                             "csetlen\t$cd, $cb, $rt",
                              [(set CheriRegs:$cd, (int_cheri_set_cap_length CheriRegs:$cb, CPU64Regs:$rt))]> {
   let hasSideEffects = 1;
 }
 
 def CGetLength : CheriFmtGet<3, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
-                             "CGetLength $rd, $cb",
+                             "cgetlength $rd, $cb",
                              [(set CPU64Regs:$rd, (int_cheri_get_cap_length CheriRegs:$cb))]>;
 
 def : Pat<(int_cheri_get_cap_reg (i32 0)), (CIncBase C0, ZERO_64)>;
@@ -1506,31 +1506,31 @@ let usesCustomInserter = 1 in {
 }
 
 def CAndPerm : CheriFmtSet<0, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
-                           "CAndPerm\t$cd, $cb, $rt",
+                           "candperm\t$cd, $cb, $rt",
                            [(set CheriRegs:$cd, (int_cheri_and_cap_perms CheriRegs:$cb, CPU64Regs:$rt))]>;
 
 def CGetPerm : CheriFmtGet<0, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
-                           "CGetPerm $rd, $cb",
+                           "cgetperm $rd, $cb",
                            [(set CPU64Regs:$rd, (int_cheri_get_cap_perms CheriRegs:$cb))]>;
 
 def CSetType : CheriFmtSet<1, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
-                           "CSetType\t$cd, $cb, $rt",
+                           "csettype\t$cd, $cb, $rt",
                            [(set CheriRegs:$cd, (int_cheri_set_cap_type CheriRegs:$cb, CPU64Regs:$rt))]>;
 
 def CGetType : CheriFmtGet<1, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
-                           "CGetType $rd, $cb",
+                           "cgettype $rd, $cb",
                            [(set CPU64Regs:$rd, (int_cheri_get_cap_type CheriRegs:$cb))]>;
 
 def CSealData : CheriFmt3Caps<0x02, (outs CheriRegs:$cd), (ins CheriRegs:$cs, CheriRegs:$ct),
-                              "CSealData\t$cd, $cs, $ct",
+                              "csealdata\t$cd, $cs, $ct",
                               [(set CheriRegs: $cd, (int_cheri_seal_cap_data CheriRegs:$cs, CheriRegs:$ct))]>;
 
 def CSealCode : CheriFmt2Caps<0x01, (outs CheriRegs:$cd), (ins CheriRegs:$cs),
-                              "CSealCode\t$cd, $cs",
+                              "csealcode\t$cd, $cs",
                               [(set CheriRegs: $cd, (int_cheri_seal_cap_code CheriRegs:$cs))]>;
 
 def CUnseal   : CheriFmt3Caps<0x03, (outs CheriRegs:$cd), (ins CheriRegs:$cs, CheriRegs:$ct),
-                              "CUnseal\t$cd, $cs, $ct",
+                              "cunseal\t$cd, $cs, $ct",
                               [(set CheriRegs: $cd, (int_cheri_unseal_cap CheriRegs:$cs, CheriRegs:$ct))]>;
 
 // Int to pointer in address space 0
@@ -1538,10 +1538,10 @@ def : Pat<(inttoptr CPU64Regs:$rt),
           (CIncBase C0, CPU64Regs:$rt)>;
 
 def STORECAP : CheriFmtCSCR<(outs), (ins CheriRegs:$cs, CPU64Regs:$rt, simm11:$offset, CheriRegs:$cb),
-                         "CSCR\t$cs, ${rt}, ${offset}(${cb})",
+                         "cscr\t$cs, ${rt}, ${offset}(${cb})",
                          [(store CheriRegs:$cs, (add (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset)))]>;
 
-def CLEARTAG : CheriFmtClearTag<(outs CheriRegs:$cd), (ins), "CClearTag\t$cd",
+def CLEARTAG : CheriFmtClearTag<(outs CheriRegs:$cd), (ins), "ccleartag\t$cd",
                                 [(set CheriRegs:$cd, (inttoptr (i64 0)))]>;
 
 def : Pat<(store CheriRegs:$cs, CPU64Regs:$rt),
@@ -1549,7 +1549,7 @@ def : Pat<(store CheriRegs:$cs, CPU64Regs:$rt),
 
 // Load a capability
 def LOADCAP : CheriFmtCLCR<(outs CheriRegs:$cs), (ins CPU64Regs:$rt, simm11:$offset, CheriRegs:$cb),
-                        "CLCR\t$cs ${rt}, ${offset}(${cb})",
+                        "clcr\t$cs ${rt}, ${offset}(${cb})",
                         [(set CheriRegs:$cs, (load (add (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset))))]>;
 
 def : Pat<(load CPU64Regs:$rt),
