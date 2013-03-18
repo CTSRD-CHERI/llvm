@@ -1419,7 +1419,7 @@ def CSetLength : CheriFmtSet<3, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64R
 }
 
 def CGetLength : CheriFmtGet<3, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
-                             "cgetlength $rd, $cb",
+                             "cgetlen $rd, $cb",
                              [(set CPU64Regs:$rd, (int_cheri_get_cap_length CheriRegs:$cb))]>;
 
 def : Pat<(int_cheri_get_cap_reg (i32 0)), (CIncBase C0, ZERO_64)>;
@@ -1495,7 +1495,7 @@ def : Pat<(inttoptr CPU64Regs:$rt),
           (CIncBase C0, CPU64Regs:$rt)>;
 
 def STORECAP : CheriFmtCSCR<(outs), (ins CheriRegs:$cs, CPU64Regs:$rt, simm11:$offset, CheriRegs:$cb),
-                         "cscr\t$cs, ${rt}, ${offset}(${cb})",
+                         "csc\t$cs, ${rt}, ${offset}(${cb})",
                          [(store CheriRegs:$cs, (add (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset)))]>;
 
 def CLEARTAG : CheriFmtClearTag<(outs CheriRegs:$cd), (ins), "ccleartag\t$cd",
@@ -1506,7 +1506,7 @@ def : Pat<(store CheriRegs:$cs, CPU64Regs:$rt),
 
 // Load a capability
 def LOADCAP : CheriFmtCLCR<(outs CheriRegs:$cs), (ins CPU64Regs:$rt, simm11:$offset, CheriRegs:$cb),
-                        "clcr\t$cs ${rt}, ${offset}(${cb})",
+                        "clc\t$cs ${rt}, ${offset}(${cb})",
                         [(set CheriRegs:$cs, (load (add (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset))))]>;
 
 def : Pat<(load CPU64Regs:$rt),
@@ -1516,7 +1516,7 @@ def : Pat<(load CheriRegs:$cb),
 
 // Load via a capability register
 let canFoldAsLoad = 1 in
-multiclass LoadViaCap<bits<2> t, bit sExt, string instr_asm, RegisterClass RC, PatFrag loadType> {
+multiclass LoadViaCap<bits<2> t, bit sExt, string instr_asm, RegisterOperand RC, PatFrag loadType> {
   def #NAME# : CheriFmtCLX<t, sExt,
                              (outs RC:$rd),
                              (ins CPU64Regs:$rt, simm8:$offset, CheriRegs:$cb),
@@ -1530,13 +1530,13 @@ multiclass LoadViaCap0<Instruction Op, PatFrag loadType> {
 }
 
 
-defm CAPLOAD8      : LoadViaCap<0, 1, "clb", CPURegs, sextloadi8>;
-defm CAPLOAD16     : LoadViaCap<1, 1, "clh", CPURegs, sextloadi16>;
-defm CAPLOAD32     : LoadViaCap<2, 1, "clw", CPURegs, load>;
-defm CAPLOAD64     : LoadViaCap<3, 0, "cld", CPU64Regs, load>;
+defm CAPLOAD8      : LoadViaCap<0, 1, "clb", CPURegsOpnd, sextloadi8>;
+defm CAPLOAD16     : LoadViaCap<1, 1, "clh", CPURegsOpnd, sextloadi16>;
+defm CAPLOAD32     : LoadViaCap<2, 1, "clw", CPURegsOpnd, load>;
+defm CAPLOAD64     : LoadViaCap<3, 0, "cld", CPU64RegsOpnd, load>;
 
-defm CAPLOADU8     : LoadViaCap<0, 0, "clbu", CPURegs, extloadi8>;
-defm CAPLOADU16    : LoadViaCap<1, 0, "clhu", CPURegs, extloadi16_a>;
+defm CAPLOADU8     : LoadViaCap<0, 0, "clbu", CPURegsOpnd, extloadi8>;
+defm CAPLOADU16    : LoadViaCap<1, 0, "clhu", CPURegsOpnd, extloadi16>;
 
 defm CAP0LOADA8     : LoadViaCap0<CAPLOAD8, extloadi8>;
 defm CAP0LOADA16    : LoadViaCap0<CAPLOAD16, extloadi16_a>;
@@ -1552,25 +1552,26 @@ defm CAP0LOAD32    : LoadViaCap0<CAPLOAD32, load>;
 defm CAP0LOAD64    : LoadViaCap0<CAPLOAD64, load>;
 
 // Store via a capability register
-multiclass StoreViaCap<bits<2> t, bit e, string instr_asm, RegisterClass RC, PatFrag storeType> {
+multiclass StoreViaCap<bits<2> t, bit e, string instr_asm, RegisterOperand RC, PatFrag storeType> {
   def #NAME# : CheriFmtCSX<t, e,
                              (outs),
                              (ins RC:$rs, CPU64Regs:$rt, simm8:$offset, CheriRegs:$cb),
                              !strconcat(instr_asm, "\t$rs, ${rt}, ${offset}(${cb})"),
                            [(storeType (add (add (ptrtoint CheriRegs:$cb), CPU64Regs: $rt), (i64 immSExt8:$offset)), RC:$rs)]>;
 }
-multiclass StoreViaCap0<Instruction Op, RegisterClass RC, PatFrag storeType> {
+multiclass StoreViaCap0<Instruction Op, RegisterOperand RC, PatFrag storeType> {
   def : Pat<(storeType RC:$rd, CheriRegs:$cb),
             (Op RC:$rd, ZERO_64, (i64 0), CheriRegs:$cb)>;
   def : Pat<(storeType RC:$rd, (add (ptrtoint CheriRegs:$cb), CPU64Regs:$rt)),
             (Op RC:$rd, CPU64Regs:$rt, (i64 0), CheriRegs:$cb)>;
 }
-defm CAPSTORE8      : StoreViaCap<0, 0, "csb", CPURegs, truncstorei8>;
-defm CAPSTORE16     : StoreViaCap<1, 0, "csh", CPURegs, truncstorei16>;
-defm CAPSTORE32     : StoreViaCap<2, 0, "csw", CPURegs, store>;
-defm CAPSTORE64     : StoreViaCap<3, 0, "csd", CPU64Regs, store>;
+defm CAPSTORE8      : StoreViaCap<0, 0, "csb", CPURegsOpnd, truncstorei8>;
+defm CAPSTORE16     : StoreViaCap<1, 0, "csh", CPURegsOpnd, truncstorei16>;
+defm CAPSTORE32     : StoreViaCap<2, 0, "csw", CPURegsOpnd, store>;
+defm CAPSTORE64     : StoreViaCap<3, 0, "csd", CPU64RegsOpnd, store>;
 
-defm CAP0STORE8     : StoreViaCap0<CAPSTORE8, CPURegs, truncstorei8>;
-defm CAP0STORE16    : StoreViaCap0<CAPSTORE16, CPURegs, truncstorei16>;
-defm CAP0STORE32    : StoreViaCap0<CAPSTORE32, CPURegs, store>;
-defm CAP0STORE64    : StoreViaCap0<CAPSTORE64, CPU64Regs, store>;
+defm CAP0STORE8     : StoreViaCap0<CAPSTORE8, CPURegsOpnd, truncstorei8>;
+defm CAP0STORE16    : StoreViaCap0<CAPSTORE16, CPURegsOpnd, truncstorei16>;
+defm CAP0STORE32    : StoreViaCap0<CAPSTORE32, CPURegsOpnd, store>;
+defm CAP0STORE64    : StoreViaCap0<CAPSTORE64, CPU64RegsOpnd, store>;
+
