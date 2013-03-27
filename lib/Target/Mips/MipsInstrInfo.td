@@ -1506,7 +1506,7 @@ def : Pat<(store CheriRegs:$cs, CPU64Regs:$rt),
 
 // Load a capability
 def LOADCAP : CheriFmtCLCR<(outs CheriRegs:$cs), (ins CPU64Regs:$rt, simm11:$offset, CheriRegs:$cb),
-                        "clc\t$cs ${rt}, ${offset}(${cb})",
+                        "clc\t$cs, ${rt}, ${offset}(${cb})",
                         [(set CheriRegs:$cs, (load (add (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset))))]>;
 
 def : Pat<(load CPU64Regs:$rt),
