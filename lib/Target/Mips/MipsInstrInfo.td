@@ -1111,6 +1111,15 @@ def MTC0 : MFC3OP<"mtc0", GPR32Opnd>, MFC3OP_FM<0x10, 4>;
 def MFC2 : MFC3OP<"mfc2", GPR32Opnd>, MFC3OP_FM<0x12, 0>;
 def MTC2 : MFC3OP<"mtc2", GPR32Opnd>, MFC3OP_FM<0x12, 4>;
 
+class BREAK : InstSE<(outs), (ins),
+                     "break", [(trap)], NoItinerary, FrmOther> {
+  let Inst{31-6} = 0;
+  let Inst{5-0} = 0xd;
+}
+
+def BRK : BREAK;
+
+
 //===----------------------------------------------------------------------===//
 // Instruction aliases
 //===----------------------------------------------------------------------===//
@@ -1453,7 +1462,6 @@ def CGetTag : CheriFmtGet<5, (outs CPURegs:$rd), (ins CheriRegs:$cb),
 
 def : Pat<(brcond (i32 (setne (int_cheri_get_cap_tag CheriRegs:$cd), (i32 0))), imm:$offset),
           (BC2F CheriRegs:$cd, imm:$offset)>;
-
 
 def CSetLength : CheriFmtSet<3, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
                              "csetlen\t$cd, $cb, $rt",
