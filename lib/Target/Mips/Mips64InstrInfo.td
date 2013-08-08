@@ -193,13 +193,15 @@ def SEB64 : SignExtInReg<"seb", i8, GPR64Opnd>, SEB_FM<0x10, 0x20>;
 def SEH64 : SignExtInReg<"seh", i16, GPR64Opnd>, SEB_FM<0x18, 0x20>;
 }
 
-/// Count Leading
-def DCLZ : CountLeading0<"dclz", GPR64Opnd>, CLO_FM<0x24>;
-def DCLO : CountLeading1<"dclo", GPR64Opnd>, CLO_FM<0x25>;
+let Predicates = [HasMips64] in {
+  /// Count Leading
+  def DCLZ : CountLeading0<"dclz", GPR64Opnd>, CLO_FM<0x24>;
+  def DCLO : CountLeading1<"dclo", GPR64Opnd>, CLO_FM<0x25>;
 
-/// Double Word Swap Bytes/HalfWords
-def DSBH : SubwordSwap<"dsbh", GPR64Opnd>, SEB_FM<2, 0x24>;
-def DSHD : SubwordSwap<"dshd", GPR64Opnd>, SEB_FM<5, 0x24>;
+  /// Double Word Swap Bytes/HalfWords
+  def DSBH : SubwordSwap<"dsbh", GPR64Opnd>, SEB_FM<2, 0x24>;
+  def DSHD : SubwordSwap<"dshd", GPR64Opnd>, SEB_FM<5, 0x24>;
+}
 
 def LEA_ADDiu64 : EffectiveAddress<"daddiu", GPR64Opnd>, LW_FM<0x19>;
 
@@ -306,7 +308,27 @@ def : MipsPat<(bswap GPR64:$rt), (DSHD (DSBH GPR64:$rt))>;
 //===----------------------------------------------------------------------===//
 def : InstAlias<"move $dst, $src",
                 (DADDu GPR64Opnd:$dst,  GPR64Opnd:$src, ZERO_64), 1>,
-      Requires<[HasMips64]>;
+      Requires<[IsGP64bit]>;
+def : InstAlias<"move $dst, $src",
+                (OR64 GPR64Opnd:$dst, GPR64Opnd:$src, ZERO_64), 1>,
+      Requires<[IsGP64bit]>;
+def : InstAlias<"and $rs, $rt, $imm",
+                (DANDi GPR64Opnd:$rs, GPR64Opnd:$rt, uimm16_64:$imm),
+                1>,
+      Requires<[IsGP64bit]>;
+def : InstAlias<"slt $rs, $rt, $imm",
+                (SLTi64 CPURegsOpnd:$rs, GPR64:$rt, simm16_64:$imm), 1>,
+      Requires<[IsGP64bit]>;
+def : InstAlias<"xor $rs, $rt, $imm",
+                (XORi64 GPR64Opnd:$rs, GPR64Opnd:$rt, uimm16_64:$imm),
+                1>,
+      Requires<[IsGP64bit]>;
+def : InstAlias<"not $rt, $rs",
+                (NOR64 GPR64Opnd:$rt, GPR64Opnd:$rs, ZERO_64), 1>,
+      Requires<[IsGP64bit]>;
+def : InstAlias<"j $rs", (JR64 GPR64:$rs), 0>, Requires<[IsGP64bit]>;
+def : InstAlias<"jalr $rs", (JALR64 RA_64, GPR64:$rs)>,
+      Requires<[IsGP64bit]>;
 def : InstAlias<"daddu $rs, $rt, $imm",
                 (DADDiu GPR64Opnd:$rs, GPR64Opnd:$rt, simm16_64:$imm),
                 0>;

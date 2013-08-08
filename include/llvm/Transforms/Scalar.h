@@ -349,10 +349,6 @@ extern char &InstructionSimplifierID;
 // "block_weights" metadata.
 FunctionPass *createLowerExpectIntrinsicPass();
 
-//===----------------------------------------------------------------------===//
-// CheriRangeChecker - Inserts explicit range enforcement for pointers to
-// allocas and globals.
-FunctionPass *createCheriRangeChecker(void);
 
 //===----------------------------------------------------------------------===//
 //

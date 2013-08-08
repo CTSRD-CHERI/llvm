@@ -66,9 +66,12 @@ def FeatureMips32r2    : SubtargetFeature<"mips32r2", "MipsArchVersion",
                                 "Mips32r2", "Mips32r2 ISA Support",
                                 [FeatureMips32, FeatureSEInReg, FeatureSwap,
                                  FeatureFPIdx]>;
+def FeatureMips4       : SubtargetFeature<"mips4", "MipsArchVersion",
+                                "Mips4", "MIPS IV ISA Support",
+                                [FeatureGP64Bit, FeatureFP64Bit]>;
 def FeatureMips64      : SubtargetFeature<"mips64", "MipsArchVersion",
                                 "Mips64", "Mips64 ISA Support",
-                                [FeatureGP64Bit, FeatureFP64Bit,
+                                [FeatureMips4, FeatureGP64Bit, FeatureFP64Bit,
                                  FeatureMips32, FeatureFPIdx]>;
 def FeatureMips64r2    : SubtargetFeature<"mips64r2", "MipsArchVersion",
                                 "Mips64r2", "Mips64r2 ISA Support",
@@ -101,7 +104,7 @@ def : Proc<"mips32r2", [FeatureMips32r2]>;
 def : Proc<"mips64", [FeatureMips64]>;
 def : Proc<"mips64r2", [FeatureMips64r2]>;
 def : Proc<"mips16", [FeatureMips16]>;
-def : Proc<"cheri", [FeatureMipsCheri, FeatureMips64]>;
+def : Proc<"cheri", [FeatureMipsCheri, FeatureMips4]>;
 
 def MipsAsmWriter : AsmWriter {
   string AsmWriterClassName  = "InstPrinter";
