@@ -52,6 +52,8 @@ namespace llvm {
       EFlags |= ELF::EF_MIPS_ARCH_64;
     else if (Subtarget.hasMips32r2())
       EFlags |= ELF::EF_MIPS_ARCH_32R2;
+    else if (Subtarget.isGP64bit())
+      EFlags |= ELF::EF_MIPS_ARCH_4;
     else
       EFlags |= ELF::EF_MIPS_ARCH_32;
 
