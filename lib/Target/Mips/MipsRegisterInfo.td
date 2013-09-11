@@ -80,9 +80,7 @@ class ACCReg<bits<16> Enc, string n, list<Register> subregs>
 class HWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
 // CHERI capability registers
-class CAP<bits<5> num, string n> : MipsReg<n> {
-  let Num = num;
-}
+class CAP<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
 //===----------------------------------------------------------------------===//
 //  Registers

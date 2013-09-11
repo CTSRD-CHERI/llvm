@@ -126,13 +126,16 @@ let Predicates = [HasStdEnc], isCodeGenOnly = 1 in {
   def MOVN_I64_I64 : CMov_I_I_FT<"movn", GPR64Opnd, GPR64Opnd, IIArith>,
                      ADD_FM<0, 0xb>;
 }
-// FIXME: Check these against upstream
+
 def MOVZ_I_S : CMov_I_F_FT<"movz.s", GPR32Opnd, FGR32Opnd, IIFmove>,
                CMov_I_F_FM<18, 16>;
+
+let isCodeGenOnly = 1 in
 def MOVZ_I64_S : CMov_I_F_FT<"movz.s", GPR64Opnd, FGR32Opnd, IIFmove>,
-                 CMov_I_F_FM<18, 16>, Requires<[IsGP64bit, HasStdEnc]> {
-  let DecoderNamespace = "Mips64";
-}
+                 CMov_I_F_FM<18, 16>, Requires<[HasMips64, HasStdEnc]>;
+
+def MOVN_I_S : CMov_I_F_FT<"movn.s", GPR32Opnd, FGR32Opnd, IIFmove>,
+               CMov_I_F_FM<19, 16>;
 
 let isCodeGenOnly = 1 in
 def MOVN_I64_S : CMov_I_F_FT<"movn.s", GPR64Opnd, FGR32Opnd, IIFmove>,
@@ -167,20 +170,6 @@ def MOVT_I64 : CMov_F_I_FT<"movt", GPR64Opnd, IIArith, MipsCMovFP_T>,
 
 def MOVF_I : MMRel, CMov_F_I_FT<"movf", GPR32Opnd, IIArith, MipsCMovFP_F>,
              CMov_F_I_FM<0>;
-
-def MOVT_I : CMov_F_I_FT<"movt", GPR32Opnd, IIArith, MipsCMovFP_T>,
-             CMov_F_I_FM<1>;
-
-let isCodeGenOnly = 1 in
-def MOVT_I64 : CMov_F_I_FT<"movt", GPR64Opnd, IIArith, MipsCMovFP_T>,
-               CMov_F_I_FM<1>, Requires<[IsGP64bit, HasStdEnc]>;
-
-def MOVF_I : CMov_F_I_FT<"movf", GPR32Opnd, IIArith, MipsCMovFP_F>,
-             CMov_F_I_FM<0>;
-
-let isCodeGenOnly = 1 in
-def MOVF_I64 : CMov_F_I_FT<"movf", GPR64Opnd, IIArith, MipsCMovFP_F>,
-               CMov_F_I_FM<0>, Requires<[IsGP64bit, HasStdEnc]>;
 
 let isCodeGenOnly = 1 in
 def MOVF_I64 : CMov_F_I_FT<"movf", GPR64Opnd, IIArith, MipsCMovFP_F>,
