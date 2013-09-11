@@ -1,12 +1,12 @@
-#include "llvm/Constants.h"
-#include "llvm/DataLayout.h"
-#include "llvm/Function.h"
-#include "llvm/GlobalVariable.h"
-#include "llvm/IRBuilder.h"
-#include "llvm/Instructions.h"
-#include "llvm/Intrinsics.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CallSite.h"
@@ -78,7 +78,7 @@ namespace
       CheriRangeChecker() : FunctionPass(ID) {}
       virtual bool doInitialization(Module &Mod) {
         M = &Mod;
-        TD = new TargetData(M);
+        TD = new DataLayout(M);
         Int64Ty  = IntegerType::get(M->getContext(), 64);
         CapPtrTy = PointerType::get(IntegerType::get(M->getContext(), 8), 200);
         return true;

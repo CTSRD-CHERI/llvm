@@ -366,7 +366,7 @@ static void getCopyToParts(SelectionDAG &DAG, SDLoc DL,
     if (PartVT.isFloatingPoint() && ValueVT.isFloatingPoint()) {
       assert(NumParts == 1 && "Do not know what to promote to!");
       Val = DAG.getNode(ISD::FP_EXTEND, DL, PartVT, Val);
-    } else if (PartVT.V.SimpleTy == MVT::iFATPTR) {
+    } else if (PartVT.SimpleTy == MVT::iFATPTR) {
       Val = DAG.getNode(ISD::INTTOPTR, DL, PartVT, Val);
     } else {
       assert((PartVT.isInteger() || PartVT == MVT::x86mmx) &&
@@ -3325,10 +3325,10 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   }
 
   if (FatPointer) {
-    SDValue Base = DAG.getNode(ISD::ADD, getCurDebugLoc(), N.getValueType(), 
-        DAG.getNode(ISD::PTRTOINT, getCurDebugLoc(), N.getValueType(),
+    SDValue Base = DAG.getNode(ISD::ADD, getCurSDLoc(), N.getValueType(), 
+        DAG.getNode(ISD::PTRTOINT, getCurSDLoc(), N.getValueType(),
           OrigN), N);
-    N = DAG.getNode(ISD::INTTOPTR, getCurDebugLoc(), OrigN.getValueType(), Base);
+    N = DAG.getNode(ISD::INTTOPTR, getCurSDLoc(), OrigN.getValueType(), Base);
   }
   setValue(&I, N);
 }
@@ -3444,7 +3444,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
       ChainI = 0;
     }
     //FIXME:
-    SDValue A = Offsets[i] ? DAG.getNode(ISD::ADD, getCurDebugLoc(),
+    SDValue A = Offsets[i] ? DAG.getNode(ISD::ADD, getCurSDLoc(),
                             PtrVT, Ptr,
                             DAG.getConstant(Offsets[i], PtrVT)) : Ptr;
     SDValue L = DAG.getLoad(ValueVTs[i], getCurSDLoc(), Root,
@@ -3509,7 +3509,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
       ChainI = 0;
     }
     // FIXME:
-    SDValue Add = Offsets[i] ? DAG.getNode(ISD::ADD, getCurDebugLoc(),
+    SDValue Add = Offsets[i] ? DAG.getNode(ISD::ADD, getCurSDLoc(), PtrVT, Ptr,
                               DAG.getConstant(Offsets[i], PtrVT)) : Ptr;
     SDValue St = DAG.getStore(Root, getCurSDLoc(),
                               SDValue(Src.getNode(), Src.getResNo() + i),

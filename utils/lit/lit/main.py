@@ -139,7 +139,6 @@ def main(builtinParameters = {}):
     group.add_option("", "--show-suites", dest="showSuites",
                       help="Show discovered test suites",
                       action="store_true", default=False)
-<<<<<<< HEAD
     group.add_option("", "--show-tests", dest="showTests",
                       help="Show all discovered tests",
                       action="store_true", default=False)
@@ -149,14 +148,9 @@ def main(builtinParameters = {}):
     group.add_option("", "--use-threads", dest="useProcesses",
                       help="Run tests in parallel with threads (not processes)",
                       action="store_false", default=False)
-=======
-    group.add_option("", "--repeat", dest="repeatTests", metavar="N",
-                      help="Repeat tests N times (for timing)",
-                      action="store", default=None, type=int)
     group.add_option("", "--junit-xml-output", dest="xmlFile",
                       help=("Write JUnit-compatible XML test reports to the"
                             " specified file"), default=None)
->>>>>>> 1ee892a... Allow lit to emit JUnit-compatible XML.
     parser.add_option_group(group)
 
     (opts, args) = parser.parse_args()
@@ -277,19 +271,12 @@ def main(builtinParameters = {}):
             print(header)
 
     startTime = time.time()
-<<<<<<< HEAD
     display = TestingProgressDisplay(opts, len(run.tests), progressBar)
     try:
         run.execute_tests(display, opts.numThreads, opts.maxTime,
                           opts.useProcesses)
     except KeyboardInterrupt:
         sys.exit(2)
-=======
-    display = TestingProgressDisplay(opts, len(tests), progressBar)
-
-    provider = TestProvider(tests, opts.maxTime)
-    runTests(opts.numThreads, litConfig, provider, display)
->>>>>>> 1ee892a... Allow lit to emit JUnit-compatible XML.
     display.finish()
 
     if not opts.quiet:

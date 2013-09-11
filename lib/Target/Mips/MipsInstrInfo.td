@@ -1398,39 +1398,37 @@ def immSExt11  : PatLeaf<(imm), [{ return isInt<11>(N->getSExtValue()); }]>;
 // 8-bit immediate offset used by C[SL]C
 def simm8: Operand<i64>;
 
-def immSExt8  : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
 
-
-def CIncBase : CheriFmtSet<2, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
+def CIncBase : CheriFmtSet<2, (outs CheriRegs:$cd), (ins CheriRegs:$cb, GPR64:$rt),
                            "cincbase\t$cd, $cb, $rt",
-                           [(set CheriRegs:$cd, (inttoptr (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb))))]> {
+                           [(set CheriRegs:$cd, (inttoptr (add GPR64:$rt, (ptrtoint CheriRegs:$cb))))]> {
   let hasSideEffects = 1;
 }
 
-def CGetBase : CheriFmtGet<2, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
+def CGetBase : CheriFmtGet<2, (outs GPR64:$rd), (ins CheriRegs:$cb),
                            "cgetbase $rd, $cb",
-                           [(set CPU64Regs:$rd, (ptrtoint CheriRegs:$cb))]>;
+                           [(set GPR64:$rd, (ptrtoint CheriRegs:$cb))]>;
 
 def BC2F : CheriFmtBC2F<(outs), (ins CheriRegs:$cd, brtarget:$offset),
                         "bc2f\t$cd, $offset",
                         [(MipsBC2F CheriRegs:$cd, bb:$offset)]>;
 
-def CGetTag : CheriFmtGet<5, (outs CPURegs:$rd), (ins CheriRegs:$cb),
+def CGetTag : CheriFmtGet<5, (outs GPR32:$rd), (ins CheriRegs:$cb),
                           "CGetTag $rd, $cb",
-                          [(set CPURegs:$rd, (int_cheri_get_cap_tag CheriRegs:$cb))]>;
+                          [(set GPR32:$rd, (int_cheri_get_cap_tag CheriRegs:$cb))]>;
 
 def : Pat<(brcond (i32 (setne (int_cheri_get_cap_tag CheriRegs:$cd), (i32 0))), imm:$offset),
           (BC2F CheriRegs:$cd, imm:$offset)>;
 
-def CSetLength : CheriFmtSet<3, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
+def CSetLength : CheriFmtSet<3, (outs CheriRegs:$cd), (ins CheriRegs:$cb, GPR64:$rt),
                              "csetlen\t$cd, $cb, $rt",
-                             [(set CheriRegs:$cd, (int_cheri_set_cap_length CheriRegs:$cb, CPU64Regs:$rt))]> {
+                             [(set CheriRegs:$cd, (int_cheri_set_cap_length CheriRegs:$cb, GPR64:$rt))]> {
   let hasSideEffects = 1;
 }
 
-def CGetLength : CheriFmtGet<3, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
+def CGetLength : CheriFmtGet<3, (outs GPR64:$rd), (ins CheriRegs:$cb),
                              "cgetlen $rd, $cb",
-                             [(set CPU64Regs:$rd, (int_cheri_get_cap_length CheriRegs:$cb))]>;
+                             [(set GPR64:$rd, (int_cheri_get_cap_length CheriRegs:$cb))]>;
 
 def : Pat<(int_cheri_get_cap_reg (i32 0)), (CIncBase C0, ZERO_64)>;
 def : Pat<(int_cheri_get_cap_reg (i32 1)), (CIncBase C1, ZERO_64)>;
@@ -1465,28 +1463,21 @@ def : Pat<(int_cheri_get_cap_reg (i32 29)), (CIncBase C29, ZERO_64)>;
 def : Pat<(int_cheri_get_cap_reg (i32 30)), (CIncBase C30, ZERO_64)>;
 def : Pat<(int_cheri_get_cap_reg (i32 31)), (CIncBase C31, ZERO_64)>;
 
-def regno: Operand<i32>;
-let usesCustomInserter = 1 in {
-  def SetCapReg : MipsPseudo<(outs), (ins regno:$RegNo, CheriRegs: $rd),
-             "set_reg\t$RegNo, $rd",
-             [(int_cheri_set_cap_reg imm:$RegNo, CheriRegs: $rd)]>;
-}
-
-def CAndPerm : CheriFmtSet<0, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
+def CAndPerm : CheriFmtSet<0, (outs CheriRegs:$cd), (ins CheriRegs:$cb, GPR64:$rt),
                            "candperm\t$cd, $cb, $rt",
-                           [(set CheriRegs:$cd, (int_cheri_and_cap_perms CheriRegs:$cb, CPU64Regs:$rt))]>;
+                           [(set CheriRegs:$cd, (int_cheri_and_cap_perms CheriRegs:$cb, GPR64:$rt))]>;
 
-def CGetPerm : CheriFmtGet<0, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
+def CGetPerm : CheriFmtGet<0, (outs GPR64:$rd), (ins CheriRegs:$cb),
                            "cgetperm $rd, $cb",
-                           [(set CPU64Regs:$rd, (int_cheri_get_cap_perms CheriRegs:$cb))]>;
+                           [(set GPR64:$rd, (int_cheri_get_cap_perms CheriRegs:$cb))]>;
 
-def CSetType : CheriFmtSet<1, (outs CheriRegs:$cd), (ins CheriRegs:$cb, CPU64Regs:$rt),
+def CSetType : CheriFmtSet<1, (outs CheriRegs:$cd), (ins CheriRegs:$cb, GPR64:$rt),
                            "csettype\t$cd, $cb, $rt",
-                           [(set CheriRegs:$cd, (int_cheri_set_cap_type CheriRegs:$cb, CPU64Regs:$rt))]>;
+                           [(set CheriRegs:$cd, (int_cheri_set_cap_type CheriRegs:$cb, GPR64:$rt))]>;
 
-def CGetType : CheriFmtGet<1, (outs CPU64Regs:$rd), (ins CheriRegs:$cb),
+def CGetType : CheriFmtGet<1, (outs GPR64:$rd), (ins CheriRegs:$cb),
                            "cgettype $rd, $cb",
-                           [(set CPU64Regs:$rd, (int_cheri_get_cap_type CheriRegs:$cb))]>;
+                           [(set GPR64:$rd, (int_cheri_get_cap_type CheriRegs:$cb))]>;
 
 def CSealData : CheriFmt3Caps<0x02, (outs CheriRegs:$cd), (ins CheriRegs:$cs, CheriRegs:$ct),
                               "csealdata\t$cd, $cs, $ct",
@@ -1501,26 +1492,26 @@ def CUnseal   : CheriFmt3Caps<0x03, (outs CheriRegs:$cd), (ins CheriRegs:$cs, Ch
                               [(set CheriRegs: $cd, (int_cheri_unseal_cap CheriRegs:$cs, CheriRegs:$ct))]>;
 
 // Int to pointer in address space 0
-def : Pat<(inttoptr CPU64Regs:$rt),
-          (CIncBase C0, CPU64Regs:$rt)>;
+def : Pat<(inttoptr GPR64:$rt),
+          (CIncBase C0, GPR64:$rt)>;
 
-def STORECAP : CheriFmtCSCR<(outs), (ins CheriRegs:$cs, CPU64Regs:$rt, simm11:$offset, CheriRegs:$cb),
+def STORECAP : CheriFmtCSCR<(outs), (ins CheriRegs:$cs, GPR64:$rt, simm11:$offset, CheriRegs:$cb),
                          "csc\t$cs, ${rt}, ${offset}(${cb})",
-                         [(store CheriRegs:$cs, (add (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset)))]>;
+                         [(store CheriRegs:$cs, (add (add GPR64:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset)))]>;
 
 def CLEARTAG : CheriFmtClearTag<(outs CheriRegs:$cd), (ins), "ccleartag\t$cd",
                                 [(set CheriRegs:$cd, (inttoptr (i64 0)))]>;
 
-def : Pat<(store CheriRegs:$cs, CPU64Regs:$rt),
-          (STORECAP CheriRegs:$cs, CPU64Regs:$rt, (i64 0), C0)>;
+def : Pat<(store CheriRegs:$cs, GPR64:$rt),
+          (STORECAP CheriRegs:$cs, GPR64:$rt, (i64 0), C0)>;
 
 // Load a capability
-def LOADCAP : CheriFmtCLCR<(outs CheriRegs:$cs), (ins CPU64Regs:$rt, simm11:$offset, CheriRegs:$cb),
+def LOADCAP : CheriFmtCLCR<(outs CheriRegs:$cs), (ins GPR64:$rt, simm11:$offset, CheriRegs:$cb),
                         "clc\t$cs, ${rt}, ${offset}(${cb})",
-                        [(set CheriRegs:$cs, (load (add (add CPU64Regs:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset))))]>;
+                        [(set CheriRegs:$cs, (load (add (add GPR64:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset))))]>;
 
-def : Pat<(load CPU64Regs:$rt),
-          (LOADCAP CPU64Regs:$rt, (i64 0), C0)>;
+def : Pat<(load GPR64:$rt),
+          (LOADCAP GPR64:$rt, (i64 0), C0)>;
 def : Pat<(load CheriRegs:$cb),
           (LOADCAP ZERO_64, (i64 0), CheriRegs:$cb)>;
 
@@ -1529,9 +1520,9 @@ let canFoldAsLoad = 1 in
 multiclass LoadViaCap<bits<2> t, bit sExt, string instr_asm, RegisterOperand RC, PatFrag loadType> {
   def #NAME# : CheriFmtCLX<t, sExt,
                              (outs RC:$rd),
-                             (ins CPU64Regs:$rt, simm8:$offset, CheriRegs:$cb),
+                             (ins GPR64:$rt, simm8:$offset, CheriRegs:$cb),
                              !strconcat(instr_asm, "\t$rd, ${rt}, ${offset}(${cb})"),
-                           [(set RC:$rd, (loadType(add (add (ptrtoint CheriRegs:$cb), CPU64Regs:$rt), (i64 immSExt8:$offset))))]>;
+                           [(set RC:$rd, (loadType(add (add (ptrtoint CheriRegs:$cb), GPR64:$rt), (i64 immSExt8:$offset))))]>;
 }
 
 multiclass LoadViaCap0<Instruction Op, PatFrag loadType> {
@@ -1540,17 +1531,17 @@ multiclass LoadViaCap0<Instruction Op, PatFrag loadType> {
 }
 
 
-defm CAPLOAD8      : LoadViaCap<0, 1, "clb", CPURegsOpnd, sextloadi8>;
-defm CAPLOAD16     : LoadViaCap<1, 1, "clh", CPURegsOpnd, sextloadi16>;
-defm CAPLOAD32     : LoadViaCap<2, 1, "clw", CPURegsOpnd, load>;
-defm CAPLOAD64     : LoadViaCap<3, 0, "cld", CPU64RegsOpnd, load>;
+defm CAPLOAD8      : LoadViaCap<0, 1, "clb", GPR32Opnd, sextloadi8>;
+defm CAPLOAD16     : LoadViaCap<1, 1, "clh", GPR32Opnd, sextloadi16>;
+defm CAPLOAD32     : LoadViaCap<2, 1, "clw", GPR32Opnd, load>;
+defm CAPLOAD64     : LoadViaCap<3, 0, "cld", GPR64Opnd, load>;
 
-defm CAPLOADU8     : LoadViaCap<0, 0, "clbu", CPURegsOpnd, extloadi8>;
-defm CAPLOADU16    : LoadViaCap<1, 0, "clhu", CPURegsOpnd, extloadi16>;
+defm CAPLOADU8     : LoadViaCap<0, 0, "clbu", GPR32Opnd, extloadi8>;
+defm CAPLOADU16    : LoadViaCap<1, 0, "clhu", GPR32Opnd, extloadi16>;
 
 defm CAP0LOADA8     : LoadViaCap0<CAPLOAD8, extloadi8>;
-defm CAP0LOADA16    : LoadViaCap0<CAPLOAD16, extloadi16_a>;
-defm CAP0LOADA32    : LoadViaCap0<CAPLOAD32, extloadi32_a>;
+defm CAP0LOADA16    : LoadViaCap0<CAPLOAD16, extloadi16>;
+defm CAP0LOADA32    : LoadViaCap0<CAPLOAD32, extloadi32>;
 
 defm CAP0LOADU8     : LoadViaCap0<CAPLOADU8, zextloadi8>;
 defm CAP0LOADU16    : LoadViaCap0<CAPLOADU16, zextloadi16>;
@@ -1565,23 +1556,23 @@ defm CAP0LOAD64    : LoadViaCap0<CAPLOAD64, load>;
 multiclass StoreViaCap<bits<2> t, bit e, string instr_asm, RegisterOperand RC, PatFrag storeType> {
   def #NAME# : CheriFmtCSX<t, e,
                              (outs),
-                             (ins RC:$rs, CPU64Regs:$rt, simm8:$offset, CheriRegs:$cb),
+                             (ins RC:$rs, GPR64:$rt, simm8:$offset, CheriRegs:$cb),
                              !strconcat(instr_asm, "\t$rs, ${rt}, ${offset}(${cb})"),
-                           [(storeType (add (add (ptrtoint CheriRegs:$cb), CPU64Regs: $rt), (i64 immSExt8:$offset)), RC:$rs)]>;
+                           [(storeType (add (add (ptrtoint CheriRegs:$cb), GPR64: $rt), (i64 immSExt8:$offset)), RC:$rs)]>;
 }
 multiclass StoreViaCap0<Instruction Op, RegisterOperand RC, PatFrag storeType> {
   def : Pat<(storeType RC:$rd, CheriRegs:$cb),
             (Op RC:$rd, ZERO_64, (i64 0), CheriRegs:$cb)>;
-  def : Pat<(storeType RC:$rd, (add (ptrtoint CheriRegs:$cb), CPU64Regs:$rt)),
-            (Op RC:$rd, CPU64Regs:$rt, (i64 0), CheriRegs:$cb)>;
+  def : Pat<(storeType RC:$rd, (add (ptrtoint CheriRegs:$cb), GPR64:$rt)),
+            (Op RC:$rd, GPR64:$rt, (i64 0), CheriRegs:$cb)>;
 }
-defm CAPSTORE8      : StoreViaCap<0, 0, "csb", CPURegsOpnd, truncstorei8>;
-defm CAPSTORE16     : StoreViaCap<1, 0, "csh", CPURegsOpnd, truncstorei16>;
-defm CAPSTORE32     : StoreViaCap<2, 0, "csw", CPURegsOpnd, store>;
-defm CAPSTORE64     : StoreViaCap<3, 0, "csd", CPU64RegsOpnd, store>;
+defm CAPSTORE8      : StoreViaCap<0, 0, "csb", GPR32Opnd, truncstorei8>;
+defm CAPSTORE16     : StoreViaCap<1, 0, "csh", GPR32Opnd, truncstorei16>;
+defm CAPSTORE32     : StoreViaCap<2, 0, "csw", GPR32Opnd, store>;
+defm CAPSTORE64     : StoreViaCap<3, 0, "csd", GPR64Opnd, store>;
 
-defm CAP0STORE8     : StoreViaCap0<CAPSTORE8, CPURegsOpnd, truncstorei8>;
-defm CAP0STORE16    : StoreViaCap0<CAPSTORE16, CPURegsOpnd, truncstorei16>;
-defm CAP0STORE32    : StoreViaCap0<CAPSTORE32, CPURegsOpnd, store>;
-defm CAP0STORE64    : StoreViaCap0<CAPSTORE64, CPU64RegsOpnd, store>;
+defm CAP0STORE8     : StoreViaCap0<CAPSTORE8, GPR32Opnd, truncstorei8>;
+defm CAP0STORE16    : StoreViaCap0<CAPSTORE16, GPR32Opnd, truncstorei16>;
+defm CAP0STORE32    : StoreViaCap0<CAPSTORE32, GPR32Opnd, store>;
+defm CAP0STORE64    : StoreViaCap0<CAPSTORE64, GPR64Opnd, store>;
 

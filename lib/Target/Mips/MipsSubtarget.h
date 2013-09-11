@@ -116,9 +116,6 @@ protected:
   // HasMSA -- supports MSA ASE.
   bool HasMSA;
 
-  /// IsCheri - Supports the CHERI capability extensions
-  bool IsCheri;
-
   InstrItineraryData InstrItins;
 
   // The instance to the register info section object
@@ -204,6 +201,9 @@ public:
   bool hasSwap()      const { return HasSwap; }
   bool hasBitCount()  const { return HasBitCount; }
   bool hasFPIdx()     const { return HasFPIdx; }
+
+  /// IsCheri - Supports the CHERI capability extensions
+  bool IsCheri;
 
   const InstrItineraryData &getInstrItineraryData() const { return InstrItins; }
   bool allowMixed16_32() const { return inMips16ModeDefault() |
