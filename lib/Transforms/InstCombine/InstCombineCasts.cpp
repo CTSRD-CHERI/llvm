@@ -1354,8 +1354,9 @@ Instruction *InstCombiner::visitIntToPtr(IntToPtrInst &CI) {
 
   if (TD) {
     unsigned AS = CI.getAddressSpace();
-    // FIXME
+    // FIXME: Proper fat pointer check
     if (TD->getPointerSizeInBits(AS) > 64) return 0;
+
     if (CI.getOperand(0)->getType()->getScalarSizeInBits() !=
         TD->getPointerSizeInBits(AS)) {
       Type *Ty = TD->getIntPtrType(CI.getContext(), AS);
@@ -1446,6 +1447,9 @@ Instruction *InstCombiner::visitPtrToInt(PtrToIntInst &CI) {
   if (Ty->isVectorTy()) // Handle vectors of pointers.
     PtrTy = VectorType::get(PtrTy, Ty->getVectorNumElements());
 
+  // FIXME: Proper fat pointer check
+  if (TD->getPointerSizeInBits(AS) > 64)
+    return commonPointerCastTransforms(CI);
   Value *P = Builder->CreatePtrToInt(CI.getOperand(0), PtrTy);
   return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
 }
