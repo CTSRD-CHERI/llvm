@@ -348,6 +348,7 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
   }
   case MVT::iFATPTR: {
     Sig.push_back(IIT_IFATPTR);
+    Sig.push_back(200);
     return EncodeFixedType(R->getValueAsDef("ElTy"), ArgCodes, Sig);
   }
   }
