@@ -68,7 +68,7 @@ def FeatureMips32r2    : SubtargetFeature<"mips32r2", "MipsArchVersion",
                                  FeatureFPIdx]>;
 def FeatureMips4       : SubtargetFeature<"mips4", "MipsArchVersion",
                                 "Mips4", "MIPS IV ISA Support",
-                                [FeatureGP64Bit, FeatureFP64Bit]>;
+                                [FeatureGP64Bit, FeatureFP64Bit, FeatureCondMov]>;
 def FeatureMips64      : SubtargetFeature<"mips64", "MipsArchVersion",
                                 "Mips64", "Mips64 ISA Support",
                                 [FeatureMips4, FeatureGP64Bit, FeatureFP64Bit,
