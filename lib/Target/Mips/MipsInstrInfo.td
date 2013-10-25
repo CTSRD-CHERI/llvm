@@ -189,6 +189,8 @@ def NotInMicroMips :  Predicate<"!Subtarget.inMicroMipsMode()">,
                       AssemblerPredicate<"!FeatureMicroMips">;
 def IsLE           :  Predicate<"Subtarget.isLittle()">;
 def IsBE           :  Predicate<"!Subtarget.isLittle()">;
+def IsCHERI        :  Predicate<"Subtarget.isCheri()">;
+def NotCHERI        :  Predicate<"!Subtarget.isCheri()">;
 
 class MipsPat<dag pattern, dag result> : Pat<pattern, result> {
   let Predicates = [HasStdEnc];
@@ -1551,6 +1553,7 @@ def : Pat<(store CheriRegs:$cs, GPR64:$rt),
           (STORECAP CheriRegs:$cs, GPR64:$rt, (i64 0), C0)>;
 
 // Load a capability
+let Predicates = [IsCHERI] in {
 def LOADCAP : CheriFmtCLCR<(outs CheriRegs:$cs), (ins GPR64:$rt, simm11:$offset, CheriRegs:$cb),
                         "clc\t$cs, ${rt}, ${offset}(${cb})",
                         [(set CheriRegs:$cs, (load (add (add GPR64:$rt, (ptrtoint CheriRegs:$cb)), (i64 immSExt11:$offset))))]>;
@@ -1620,4 +1623,4 @@ defm CAP0STORE8     : StoreViaCap0<CAPSTORE8, GPR32Opnd, truncstorei8>;
 defm CAP0STORE16    : StoreViaCap0<CAPSTORE16, GPR32Opnd, truncstorei16>;
 defm CAP0STORE32    : StoreViaCap0<CAPSTORE32, GPR32Opnd, store>;
 defm CAP0STORE64    : StoreViaCap0<CAPSTORE64, GPR64Opnd, store>;
-
+}
