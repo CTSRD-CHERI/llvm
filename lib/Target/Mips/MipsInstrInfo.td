@@ -1458,12 +1458,9 @@ def BC2F : CheriFmtBC2F<(outs), (ins CheriRegs:$cd, brtarget:$offset),
                         "bc2f\t$cd, $offset",
                         [(MipsBC2F CheriRegs:$cd, bb:$offset)]>;
 
-def CGetTag : CheriFmtGet<5, (outs GPR32:$rd), (ins CheriRegs:$cb),
+def CGetTag : CheriFmtGet<5, (outs GPR64:$rd), (ins CheriRegs:$cb),
                           "cgettag $rd, $cb",
-                          [(set GPR32:$rd, (int_cheri_get_cap_tag CheriRegs:$cb))]>;
-
-def : Pat<(brcond (i32 (setne (int_cheri_get_cap_tag CheriRegs:$cd), (i32 0))), imm:$offset),
-          (BC2F CheriRegs:$cd, imm:$offset)>;
+                          [(set GPR64:$rd, (int_cheri_get_cap_tag CheriRegs:$cb))]>;
 
 def CSetLength : CheriFmtSet<3, (outs CheriRegs:$cd), (ins CheriRegs:$cb, GPR64:$rt),
                              "csetlen\t$cd, $cb, $rt",
