@@ -1484,6 +1484,8 @@ def CIncBase : CheriFmtSet<2, (outs CheriRegs:$cd), (ins CheriRegs:$cb, GPR64:$r
                            [(set CheriRegs:$cd, (inttoptr (add GPR64:$rt, (ptrtoint CheriRegs:$cb))))]> {
   let hasSideEffects = 1;
 }
+def : InstAlias<"cmove $dst, $src",
+                (CIncBase CheriRegs:$dst, CheriRegs:$src,ZERO_64), 1>;
 
 def CGetBase : CheriFmtGet<2, (outs GPR64:$rd), (ins CheriRegs:$cb),
                            "cgetbase $rd, $cb",
