@@ -1540,6 +1540,9 @@ def CGetUnsealed : CheriFmtGet<6, (outs GPR64:$rd), (ins CheriRegs:$cb),
 def CGetPCC : CheriFmtGet<7, (outs GPR64:$rd), (ins CheriRegs:$cb),
                           "cgetpcc\t${rd}(${cb})",
                           []>;
+def CGetCause : CheriFmtGetCause<4, (outs GPR64:$rd), (ins ),
+                          "cgetcause\t${rd}",
+                          []>;
 
 // Int to pointer in address space 0
 def : Pat<(inttoptr GPR64:$rt),
