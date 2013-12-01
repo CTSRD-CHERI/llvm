@@ -107,3 +107,24 @@
     dsubu   $4,$3,$5
     move   $7,$8
     rdhwr   $5, $29
+
+#------------------------------------------------------------------------------
+# Irritating shortcuts for arithmetic instructions
+#------------------------------------------------------------------------------
+
+# CHECK:	dadd	$9, $9, $3	# encoding: [0x01,0x23,0x48,0x2c]
+# CHECK:	daddu	$9, $9, $3	# encoding: [0x01,0x23,0x48,0x2d]
+# CHECK:	daddi	$9, $9, 10	# encoding: [0x01,0x29,0x00,0x0a]
+# CHECK:	daddiu	$9, $9, 10	# encoding: [0x01,0x2a,0x48,0x2d]
+# CHECK:	dsub	$9, $9, $3	# encoding: [0x01,0x23,0x48,0xe2]
+# CHECK:	dsubu	$9, $9, $3	# encoding: [0x01,0x23,0x48,0x2f]
+# CHECK:	dsubi	$9, $9, 10	# encoding: [0x61,0x29,0xff,0xf6]
+# CHECK:	dsubiu	$9, $9, 10	# encoding: [0x65,0x29,0xff,0xf6]
+	dadd	$9, $3
+	daddu	$9, $3
+	dadd	$9, 10
+	daddu	$9, $10
+	dsub	$9, $3
+	dsubu	$9, $3
+	dsub	$9, 10
+	dsubu	$9, 10

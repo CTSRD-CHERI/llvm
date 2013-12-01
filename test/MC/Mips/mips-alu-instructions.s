@@ -118,3 +118,24 @@
     negu   $6,$7
     move   $7,$8
     rdhwr   $5, $29
+
+#------------------------------------------------------------------------------
+# Irritating shortcuts for arithmetic instructions
+#------------------------------------------------------------------------------
+
+# CHECK:	add	$9, $9, $3	# encoding: [0x01,0x23,0x48,0x20]
+# CHECK:	addu	$9, $9, $3	# encoding: [0x01,0x23,0x48,0x21]
+# CHECK:	addi	$9, $9, 10	# encoding: [0x21,0x29,0x00,0x0a]
+# CHECK:	addiu	$9, $9, 10	# encoding: [0x01,0x2a,0x48,0x21]
+# CHECK:	sub	$9, $9, $3	# encoding: [0x01,0x23,0x48,0x22]
+# CHECK:	subu	$9, $9, $3	# encoding: [0x01,0x23,0x48,0x23]
+# CHECK:	subi	$9, $9, 10	# encoding: [0x21,0x29,0xff,0xf6]
+# CHECK:	subiu	$9, $9, 10	# encoding: [0x25,0x29,0xff,0xf6]
+	add	$9, $3
+	addu	$9, $3
+	add	$9, 10
+	addu	$9, $10
+	sub	$9, $3
+	subu	$9, $3
+	sub	$9, 10
+	subu	$9, 10
