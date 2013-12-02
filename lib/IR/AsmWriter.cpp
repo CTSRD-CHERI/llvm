@@ -88,6 +88,7 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::PTX_Device:    Out << "ptx_device"; break;
   case CallingConv::X86_64_SysV:   Out << "x86_64_sysvcc"; break;
   case CallingConv::X86_64_Win64:  Out << "x86_64_win64cc"; break;
+  case CallingConv::CHERI_CCall:  Out << "chericcallcc"; break;
   }
 }
 
