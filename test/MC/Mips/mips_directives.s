@@ -45,3 +45,6 @@ $JTI0_0:
 # CHECK:    and     $3, $15, $15       # encoding: [0x01,0xef,0x18,0x24]
     abs.s  f6,FPU_MASK
     and    r3,$t7,STORE_MASK
+    .cpsetup $25, 8, __cerror
+    .cpload $t9
+    .cprestore 8
