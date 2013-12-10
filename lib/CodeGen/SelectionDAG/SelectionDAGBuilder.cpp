@@ -1066,8 +1066,8 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
       return DAG.getGlobalAddress(GV, getCurSDLoc(), VT);
 
-    if (isa<ConstantPointerNull>(C))
-      return DAG.getConstant(0, TLI->getPointerTy());
+    if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(C))
+      return DAG.getConstant(0, TLI->getPointerTy(CPN->getType()->getAddressSpace()));
 
     if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C))
       return DAG.getConstantFP(*CFP, VT);
