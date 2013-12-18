@@ -182,6 +182,10 @@ class MipsAsmParser : public MCTargetAsmParser {
   void expandMemInst(MCInst &Inst, SMLoc IDLoc,
                      SmallVectorImpl<MCInst> &Instructions, bool isLoad,
                      bool isImmOpnd);
+  void expandCapLoadC1(MCInst &Inst, SMLoc IDLoc, bool is64Bit,
+                       SmallVectorImpl<MCInst> &Instructions);
+  void expandCapStoreC1(MCInst &Inst, SMLoc IDLoc, bool is64Bit,
+                        SmallVectorImpl<MCInst> &Instructions);
   bool reportParseError(StringRef ErrorMsg);
 
   bool parseMemOffset(const MCExpr *&Res, bool isParenExpr);
@@ -636,19 +640,62 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 }
 
 bool MipsAsmParser::needsExpansion(MCInst &Inst) {
-
   switch (Inst.getOpcode()) {
   case Mips::LoadImm32Reg:
   case Mips::LoadAddr32Imm:
   case Mips::LoadAddr32Reg:
+  case Mips::CLWC1:
+  case Mips::CLDC1:
+  case Mips::CSWC1:
+  case Mips::CSDC1:
     return true;
   default:
     return false;
   }
 }
 
+void MipsAsmParser::expandCapStoreC1(MCInst &Inst, SMLoc IDLoc, bool is64Bit,
+                                    SmallVectorImpl<MCInst> &Instructions) {
+  MCInst tmpInst;
+  unsigned AtRegNum = getReg(
+    is64Bit ? Mips::GPR64RegClassID : Mips::GPR32RegClassID, getATReg());
+  tmpInst.setOpcode(is64Bit ? Mips::DMFC1 : Mips::MFC1);
+  tmpInst.addOperand(MCOperand::CreateReg(AtRegNum));
+  tmpInst.addOperand(MCOperand::CreateReg(Inst.getOperand(0).getReg()));
+  tmpInst.setLoc(IDLoc);
+  Instructions.push_back(tmpInst);
+  tmpInst.clear();
+  tmpInst.setOpcode(is64Bit ? Mips::CAPSTORE64 : Mips::CAPSTORE32);
+  tmpInst.addOperand(MCOperand::CreateReg(AtRegNum));
+  tmpInst.addOperand(MCOperand::CreateReg(Inst.getOperand(1).getReg()));
+  tmpInst.addOperand(MCOperand::CreateImm(Inst.getOperand(2).getImm()));
+  tmpInst.addOperand(MCOperand::CreateReg(Inst.getOperand(3).getReg()));
+  tmpInst.setLoc(IDLoc);
+  Instructions.push_back(tmpInst);
+}
+void MipsAsmParser::expandCapLoadC1(MCInst &Inst, SMLoc IDLoc, bool is64Bit,
+                                    SmallVectorImpl<MCInst> &Instructions) {
+  MCInst tmpInst;
+  unsigned AtRegNum = getReg(
+    is64Bit ? Mips::GPR64RegClassID : Mips::GPR32RegClassID, getATReg());
+  tmpInst.setOpcode(is64Bit ? Mips::CAPLOAD64 : Mips::CAPLOAD32);
+  tmpInst.addOperand(MCOperand::CreateReg(AtRegNum));
+  tmpInst.addOperand(MCOperand::CreateReg(Inst.getOperand(1).getReg()));
+  tmpInst.addOperand(MCOperand::CreateImm(Inst.getOperand(2).getImm()));
+  tmpInst.addOperand(MCOperand::CreateReg(Inst.getOperand(3).getReg()));
+  tmpInst.setLoc(IDLoc);
+  Instructions.push_back(tmpInst);
+  tmpInst.clear();
+  tmpInst.setOpcode(is64Bit ? Mips::DMTC1 : Mips::MTC1);
+  tmpInst.addOperand(MCOperand::CreateReg(Inst.getOperand(0).getReg()));
+  tmpInst.addOperand(MCOperand::CreateReg(AtRegNum));
+  tmpInst.setLoc(IDLoc);
+  Instructions.push_back(tmpInst);
+}
+
 void MipsAsmParser::expandInstruction(MCInst &Inst, SMLoc IDLoc,
                                       SmallVectorImpl<MCInst> &Instructions) {
+  bool is64Bit = true;
   switch (Inst.getOpcode()) {
   case Mips::LoadImm32Reg:
     return expandLoadImm(Inst, IDLoc, Instructions);
@@ -656,6 +703,14 @@ void MipsAsmParser::expandInstruction(MCInst &Inst, SMLoc IDLoc,
     return expandLoadAddressImm(Inst, IDLoc, Instructions);
   case Mips::LoadAddr32Reg:
     return expandLoadAddressReg(Inst, IDLoc, Instructions);
+  case Mips::CLWC1:
+    is64Bit = false;
+  case Mips::CLDC1: 
+    return expandCapLoadC1(Inst, IDLoc, is64Bit, Instructions);
+  case Mips::CSWC1:
+    is64Bit = false;
+  case Mips::CSDC1:
+    return expandCapStoreC1(Inst, IDLoc, is64Bit, Instructions);
   }
 }
 
@@ -2167,7 +2222,8 @@ bool MipsAsmParser::ParseInstruction(
           .Case("clw", true).Case("cld", true).Case("clc", true)
           .Case("clld", true) .Case("csb", true).Case("csh", true)
           .Case("csw", true).Case("csd", true).Case("csc", true)
-          .Case("cscd", true).Default(false)) {
+          .Case("cldc1", true).Case("clwc1", true).Case("csdc1", true)
+          .Case("cswc1", true).Case("cscd", true).Default(false)) {
       if (getLexer().isNot(AsmToken::Comma)) {
         SMLoc Loc = getLexer().getLoc();
         Parser.eatToEndOfStatement();
