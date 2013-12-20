@@ -1,5 +1,4 @@
 # RUN: llvm-mc -show-encoding -triple mips-unknown-unknown %s | FileCheck %s
-# XFAIL:
 # CHECK:  .text
 # CHECK:  $BB0_2:
 $BB0_2:
@@ -46,5 +45,12 @@ $JTI0_0:
     abs.s  f6,FPU_MASK
     and    r3,$t7,STORE_MASK
     .cpsetup $25, 8, __cerror
-    .cpload $t9
-    .cprestore 8
+# CHECK: sd	$gp, 8($sp)             # encoding: [0xff,0xbc,0x00,0x08]
+# CHECK: lui	$gp, %hi(%neg(%gp_rel(__cerror))) # encoding: [0x3c'A',0x1c'A',0x00,0x00]
+# CHECK:                                        #   fixup A - offset: 0, value: __cerror@GPOFF_HI, kind: fixup_Mips_GPOFF_HI
+# CHECK: daddu	$gp, $gp, $25           # encoding: [0x03,0x99,0xe0,0x2d]
+# CHECK: daddiu	$gp, $gp, %lo(%neg(%gp_rel(__cerror))) # encoding: [0x67'A',0x9c'A',0x00,0x00]
+# CHECK:                                        #   fixup A - offset: 0, value: __cerror@GPOFF_LO, kind: fixup_Mips_GPOFF_LO
+
+    #.cpload $t9
+    #.cprestore 8
