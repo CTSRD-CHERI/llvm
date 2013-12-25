@@ -77,7 +77,9 @@ MipsSubtarget::MipsSubtarget(const std::string &TT, const std::string &CPU,
   std::string CPUName = CPU;
   if (CPUName.empty()) {
     CPUName = "mips32";
-    if (TT.find("cheri") == 0) {
+    if (TT.find("mips4") == 0) {
+      CPUName = "mips4";
+    } else if (TT.find("cheri") == 0) {
       CPUName = "cheri";
       IsCheri = true;
     }
