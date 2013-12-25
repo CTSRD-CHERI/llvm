@@ -67,6 +67,8 @@ static inline StringRef selectMipsCPU(StringRef TT, StringRef CPU) {
     if (TheTriple.getArch() == Triple::mips ||
         TheTriple.getArch() == Triple::mipsel)
       CPU = "mips32";
+    else if (TheTriple.getArch() == Triple::mips4)
+      CPU = "mips4";
     else
       CPU = "mips64";
   }
