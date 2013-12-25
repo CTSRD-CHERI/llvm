@@ -22,6 +22,7 @@ MipsMCAsmInfo::MipsMCAsmInfo(StringRef TT) {
   Triple TheTriple(TT);
   if ((TheTriple.getArch() == Triple::mips) ||
       (TheTriple.getArch() == Triple::mips64) ||
+      (TheTriple.getArch() == Triple::mips4) ||
       (TheTriple.getArch() == Triple::cheri))
     IsLittleEndian = false;
 
