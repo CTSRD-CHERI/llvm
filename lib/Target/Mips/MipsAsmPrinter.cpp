@@ -705,6 +705,7 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 extern "C" void LLVMInitializeMipsAsmPrinter() {
   RegisterAsmPrinter<MipsAsmPrinter> X(TheMipsTarget);
   RegisterAsmPrinter<MipsAsmPrinter> Y(TheMipselTarget);
+  RegisterAsmPrinter<MipsAsmPrinter> Mips4(TheMips4Target);
   RegisterAsmPrinter<MipsAsmPrinter> A(TheMips64Target);
   RegisterAsmPrinter<MipsAsmPrinter> B(TheMips64elTarget);
   RegisterAsmPrinter<MipsAsmPrinter> C(TheMipsCheriTarget);
