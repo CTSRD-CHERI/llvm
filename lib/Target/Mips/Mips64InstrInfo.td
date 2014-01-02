@@ -162,6 +162,7 @@ def JALR64 : JumpLinkReg<"jalr", GPR64Opnd>, JALR_FM;
 def JALR64Pseudo : JumpLinkRegPseudo<GPR64Opnd, JALR, RA, GPR32Opnd>;
 def TAILCALL64_R : JumpFR<"tcallr", GPR64Opnd, MipsTailCall>,
                    MTLO_FM<8>, IsTailCall;
+def CPSETUP : MipsPseudo<(outs GPR64Opnd: $gp), (ins GPR64Opnd: $t9), []>;
 }
 
 /// Multiply and Divide Instructions.
