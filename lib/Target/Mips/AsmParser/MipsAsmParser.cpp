@@ -1130,6 +1130,10 @@ int MipsAsmParser::matchCPURegisterName(StringRef Name) {
              .Case("s8", 30)
              .Default(-1);
 
+  if ((CC != 0) && ((int)Options.getATRegNum() == CC))
+      Warning(getLexer().getLoc(), Twine("Used $") + Name + " with \".set at=$"
+          + Name + "\"");
+
   return CC;
 }
 
