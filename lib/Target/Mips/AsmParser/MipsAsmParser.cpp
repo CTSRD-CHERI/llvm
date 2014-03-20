@@ -217,7 +217,7 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   MCSymbolRefExpr::VariantKind getVariantKind(StringRef Symbol);
 
-  bool isMips64() const {
+  bool isGP64() const {
     return (STI.getFeatureBits() & Mips::FeatureGP64Bit) != 0;
   }
 
@@ -914,7 +914,7 @@ MipsAsmParser::expandLoadAddressSym(MCInst &Inst, SMLoc IDLoc,
   // + immediate
   if (Inst.getNumOperands() == 3) {
     assert(Inst.getOperand(1).getReg() ==
-      (isMips64() ? Mips::ZERO_64 : Mips::ZERO));
+      (isGP64() ? Mips::ZERO_64 : Mips::ZERO));
     ExprOperandNo = 2;
   }
   const MCOperand &SymOp = Inst.getOperand(ExprOperandNo);
@@ -934,7 +934,7 @@ MipsAsmParser::expandLoadAddressSym(MCInst &Inst, SMLoc IDLoc,
   const MCSymbolRefExpr *LoExpr = MCSymbolRefExpr::Create(
       Symbol->getSymbol().getName(), MCSymbolRefExpr::VK_Mips_ABS_LO,
       getContext());
-  if (isMips64()) {
+  if (isGP64()) {
     if (Options.getATRegNum() == 0) {
       pushInstr(Instructions, Mips::LUi, RegNo,
                 MCOperand::CreateExpr(HighestExpr), IDLoc);
@@ -1015,7 +1015,7 @@ void MipsAsmParser::expandMemInst(MCInst &Inst, SMLoc IDLoc,
   const MCExpr *ExprOffset;
   unsigned TmpRegNum;
   unsigned AtRegNum = getReg(
-      (isMips64()) ? Mips::GPR64RegClassID : Mips::GPR32RegClassID, getATReg());
+      (isGP64()) ? Mips::GPR64RegClassID : Mips::GPR32RegClassID, getATReg());
   // 1st operand is either the source or destination register.
   assert(Inst.getOperand(0).isReg() && "expected register operand kind");
   unsigned RegOpNum = Inst.getOperand(0).getReg();
@@ -1177,10 +1177,10 @@ int MipsAsmParser::matchCPURegisterName(StringRef Name) {
   // Although SGI documentation just cuts out t0-t3 for n32/n64,
   // GNU pushes the values of t0-t3 to override the o32/o64 values for t4-t7
   // We are supporting both cases, so for t0-t3 we'll just push them to t4-t7.
-  if (isMips64() && 8 <= CC && CC <= 11)
+  if (isGP64() && 8 <= CC && CC <= 11)
     CC += 4;
 
-  if (CC == -1 && isMips64())
+  if (CC == -1 && isGP64())
     CC = StringSwitch<unsigned>(Name)
              .Case("a4", 8)
              .Case("a5", 9)
@@ -1342,7 +1342,7 @@ unsigned MipsAsmParser::getReg(int RC, int RegNo) {
 }
 
 unsigned MipsAsmParser::getGPR(int RegNo) {
-  return getReg((isMips64()) ? Mips::GPR64RegClassID : Mips::GPR32RegClassID,
+  return getReg((isGP64()) ? Mips::GPR64RegClassID : Mips::GPR32RegClassID,
                  RegNo);
 }
 
@@ -1408,7 +1408,7 @@ MipsAsmParser::ParseOperand(SmallVectorImpl<MCParsedAsmOperand *> &Operands,
     SMLoc S = Parser.getTok().getLoc();
     Parser.Lex(); // Eat dollar token.
     // Parse the register operand.
-    if (!tryParseRegisterOperand(Operands, isMips64())) {
+    if (!tryParseRegisterOperand(Operands, isGP64())) {
       if (getLexer().is(AsmToken::LParen)) {
         // Check if it is indexed addressing operand.
         Operands.push_back(MipsOperand::CreateToken("(", S));
@@ -1417,7 +1417,7 @@ MipsAsmParser::ParseOperand(SmallVectorImpl<MCParsedAsmOperand *> &Operands,
           return true;
 
         Parser.Lex(); // Eat the dollar
-        if (tryParseRegisterOperand(Operands, isMips64()))
+        if (tryParseRegisterOperand(Operands, isGP64()))
           return true;
 
         if (!getLexer().is(AsmToken::RParen))
@@ -1624,7 +1624,7 @@ bool MipsAsmParser::parseRelocOperand(const MCExpr *&Res) {
 bool MipsAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
-  RegNo = tryParseRegister(isMips64());
+  RegNo = tryParseRegister(isGP64());
   EndLoc = Parser.getTok().getLoc();
   return (RegNo == (unsigned)-1);
 }
@@ -1691,7 +1691,7 @@ MipsAsmParser::OperandMatchResultTy MipsAsmParser::parseMemOperand(
 
         // Zero register assumed, add a memory operand with ZERO as its base.
         Operands.push_back(MipsOperand::CreateMem(
-            isMips64() ? Mips::ZERO_64 : Mips::ZERO, IdVal, S, E));
+            isGP64() ? Mips::ZERO_64 : Mips::ZERO, IdVal, S, E));
         return MatchOperand_Success;
       }
       Error(Parser.getTok().getLoc(), "'(' expected");
@@ -1701,7 +1701,7 @@ MipsAsmParser::OperandMatchResultTy MipsAsmParser::parseMemOperand(
     Parser.Lex(); // Eat the '(' token.
   }
 
-  Res = parseRegs(Operands, isMips64() ? (int)MipsOperand::Kind_GPR64
+  Res = parseRegs(Operands, isGP64() ? (int)MipsOperand::Kind_GPR64
                                        : (int)MipsOperand::Kind_GPR32);
   if (Res != MatchOperand_Success)
     return Res;
@@ -2092,7 +2092,7 @@ MipsAsmParser::parseMSACtrlRegs(SmallVectorImpl<MCParsedAsmOperand *> &Operands,
 MipsAsmParser::OperandMatchResultTy
 MipsAsmParser::parseGPR64(SmallVectorImpl<MCParsedAsmOperand *> &Operands) {
 
-  if (!isMips64())
+  if (!isGP64())
     return MatchOperand_NoMatch;
   return parseRegs(Operands, (int)MipsOperand::Kind_GPR64);
 }
@@ -2274,8 +2274,8 @@ bool MipsAsmParser::searchSymbolAlias(
         APInt IntVal(32, -1);
         if (!DefSymbol.substr(1).getAsInteger(10, IntVal))
           RegNum = matchRegisterByNumber(IntVal.getZExtValue(),
-                                         isMips64() ? Mips::GPR64RegClassID
-                                                    : Mips::GPR32RegClassID);
+                                         isGP64() ? Mips::GPR64RegClassID
+                                                  : Mips::GPR32RegClassID);
         else {
           // Lookup for the register with the corresponding name.
           switch (Kind) {
