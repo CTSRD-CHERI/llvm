@@ -201,6 +201,9 @@ const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case MipsISD::CBTS:              return "MipsISD::CBTS";
   case MipsISD::CBTU:              return "MipsISD::CBTU";
   case MipsISD::STACKTOCAP:        return "MipsISD::STACKTOCAP";
+  case MipsISD::CODETOCAP:         return "MipsISD::CODETOCAP";
+  case MipsISD::CapJmpLink:        return "MipsISD::CapJmpLink";
+  case MipsISD::CapRet:            return "MipsISD::CapRet";
   default:                         return nullptr;
   }
 }
@@ -2929,6 +2932,11 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     GlobalOrExternal = true;
   }
+  // If we're in the sandbox ABI, then we need to turn the address into a
+  // PCC-derived capability.
+  if (Subtarget.isCheriSandbox())
+    Callee = DAG.getNode(MipsISD::CODETOCAP, DL, MVT::iFATPTR, Callee);
+
 
   SmallVector<SDValue, 8> Ops(1, Chain);
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
@@ -2939,7 +2947,10 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (IsTailCall)
     return DAG.getNode(MipsISD::TailCall, DL, MVT::Other, Ops);
 
-  Chain = DAG.getNode(MipsISD::JmpLink, DL, NodeTys, Ops);
+  if (Subtarget.isCheriSandbox())
+    Chain = DAG.getNode(MipsISD::CapJmpLink, DL, NodeTys, Ops);
+  else
+    Chain = DAG.getNode(MipsISD::JmpLink, DL, NodeTys, Ops);
   SDValue InFlag = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -3374,6 +3385,9 @@ MipsTargetLowering::LowerReturn(SDValue Chain,
   // Add the flag if we have it.
   if (Flag.getNode())
     RetOps.push_back(Flag);
+
+  if (Subtarget.isCheriSandbox())
+    return DAG.getNode(MipsISD::CapRet, DL, MVT::Other, RetOps);
 
   // Return on Mips is always a "jr $ra"
   return DAG.getNode(MipsISD::Ret, DL, MVT::Other, RetOps);

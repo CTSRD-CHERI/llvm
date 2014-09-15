@@ -150,6 +150,12 @@ namespace llvm {
       CBTS,
       /// Convert a stack pointer into a capability.
       STACKTOCAP,
+      /// Convert a function pointer (PCC-relative address) into a capability
+      CODETOCAP,
+      /// Jump and link with a capability (rather than an integer address)
+      CapJmpLink,
+      /// Return from a call with a capability (rather than an integer address)
+      CapRet,
 
       // DSP shift nodes.
       SHLL_DSP,
