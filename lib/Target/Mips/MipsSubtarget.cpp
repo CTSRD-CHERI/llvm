@@ -59,8 +59,18 @@ CheriStackCapabilityABI(
   cl::desc("CHERI: Stack pointer is capability-relative."),
   cl::init(false));
 
+static cl::opt<bool>
+CheriLoadStoreReplacement(
+  "cheri-load-store-replacement", cl::NotHidden,
+  cl::desc("CHERI: MIPS loads/store operands are cast into addrspace 200."),
+  cl::init(false));
+
 bool MipsSubtarget::usesCheriStackCapabilityABI() const {
   return CheriStackCapabilityABI || isABI_CheriSandbox();
+}
+
+bool MipsSubtarget::usesCheriLoadStoreReplacement() const {
+  return CheriLoadStoreReplacement;
 }
 
 static cl::opt<bool>
