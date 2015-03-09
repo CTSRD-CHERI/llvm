@@ -200,7 +200,6 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     else if (Mips::GPR64RegClass.hasSubClassEq(RC))
       Opc = Mips::CAPSTORE64;
     else if (Mips::FGR64RegClass.hasSubClassEq(RC)) {
-      DebugLoc DL = I->getDebugLoc();
       MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
       unsigned IntReg = RegInfo.createVirtualRegister(&Mips::GPR64RegClass);
       BuildMI(MBB, I, DL, get(Mips::DMFC1), IntReg)
@@ -288,7 +287,6 @@ loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     else if (Mips::GPR64RegClass.hasSubClassEq(RC))
       Opc = Mips::CAPLOAD64;
     else if (Mips::FGR64RegClass.hasSubClassEq(RC)) {
-      DebugLoc DL = I->getDebugLoc();
       MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
       unsigned IntReg = RegInfo.createVirtualRegister(&Mips::GPR64RegClass);
       BuildMI(MBB, I, DL, get(Mips::CAPLOAD64), IntReg)
