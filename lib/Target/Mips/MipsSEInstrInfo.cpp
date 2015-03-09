@@ -192,9 +192,12 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
 
   // The ACC64/128 registers are handled by STORE_ACC64/128 pseudos, which call this function again with more ordinary
   // registers when they are lowered: so no special treatment for CHERI is required.
-  if (Subtarget.usesCheriStackCapabilityABI() &&
+  if ((Subtarget.usesCheriStackCapabilityABI() ||
+       Subtarget.usesCheriLoadStoreReplacement()) &&
       !Mips::ACC64RegClass.hasSubClassEq(RC) &&
       !Mips::ACC128RegClass.hasSubClassEq(RC)) {
+    unsigned capabilityRegister =
+        Subtarget.usesCheriLoadStoreReplacement() ? Mips::C0 : Mips::C11;
     if (Mips::GPR32RegClass.hasSubClassEq(RC))
       Opc = Mips::CAPSTORE32;
     else if (Mips::GPR64RegClass.hasSubClassEq(RC))
@@ -206,7 +209,7 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         .addReg(SrcReg);
       BuildMI(MBB, I, DL, get(Mips::CAPSTORE64)).addReg(IntReg, getKillRegState(true))
         .addFrameIndex(FI).addImm(Offset).addMemOperand(MMO)
-        .addReg(Mips::C11);
+        .addReg(capabilityRegister);
       return;
     }
     else if (Mips::CheriRegsRegClass.hasSubClassEq(RC)) {
@@ -221,7 +224,7 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     }
     BuildMI(MBB, I, DL, get(Opc)).addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FI).addImm(Offset).addMemOperand(MMO)
-      .addReg(Mips::C11);
+      .addReg(capabilityRegister);
     return;
   }
   if (Mips::GPR32RegClass.hasSubClassEq(RC))
@@ -279,9 +282,12 @@ loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
 
   // The ACC64/128 registers are handled by LOAD_ACC64/128 pseudos, which call this function again with more ordinary
   // registers when they are lowered: so no special treatment for CHERI is required.
-  if (Subtarget.usesCheriStackCapabilityABI() &&
+  if ((Subtarget.usesCheriLoadStoreReplacement() ||
+      Subtarget.usesCheriStackCapabilityABI()) &&
       !Mips::ACC64RegClass.hasSubClassEq(RC) &&
       !Mips::ACC128RegClass.hasSubClassEq(RC)) {
+    unsigned capabilityRegister =
+        Subtarget.usesCheriLoadStoreReplacement() ? Mips::C0 : Mips::C11;
     if (Mips::GPR32RegClass.hasSubClassEq(RC))
       Opc = Mips::CAPLOAD32;
     else if (Mips::GPR64RegClass.hasSubClassEq(RC))
@@ -291,7 +297,7 @@ loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       unsigned IntReg = RegInfo.createVirtualRegister(&Mips::GPR64RegClass);
       BuildMI(MBB, I, DL, get(Mips::CAPLOAD64), IntReg)
         .addFrameIndex(FI).addImm(Offset).addMemOperand(MMO)
-        .addReg(Mips::C11);
+        .addReg(capabilityRegister);
       BuildMI(MBB, I, DL, get(Mips::DMTC1), DestReg)
         .addReg(IntReg, getKillRegState(true));
       return;
@@ -302,7 +308,7 @@ loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     }
     BuildMI(MBB, I, DL, get(Opc), DestReg)
       .addFrameIndex(FI).addImm(Offset).addMemOperand(MMO)
-      .addReg(Mips::C11);
+      .addReg(capabilityRegister);
     return;
   }
   if (Mips::GPR32RegClass.hasSubClassEq(RC))
