@@ -245,6 +245,7 @@ public:
   bool isCheri128() const { return IsCheri128; }
   /// Uses the ABI where the stack pointer is relative to C11, not C0.
   bool usesCheriStackCapabilityABI() const;
+  bool usesCheriLoadStoreReplacement() const;
   /// This is a very ugly hack.  CodeGenPrepare can sink pointer arithmetic to
   /// appear closer to load and store operations (because SelectionDAG only
   /// looks at one basic block at a time).  Unfortunately, it defaults to using

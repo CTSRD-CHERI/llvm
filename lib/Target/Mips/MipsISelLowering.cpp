@@ -1848,7 +1848,9 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
     Global = getAddrGlobal(N, SDLoc(N), Ty, DAG,
                        (ABI.IsN32() || ABI.IsN64()) ? MipsII::MO_GOT_DISP
                                                     : MipsII::MO_GOT16,
-                       DAG.getEntryNode(), MachinePointerInfo::getGOT());
+                       DAG.getEntryNode(), MachinePointerInfo::getGOT(),
+                           (ABI.IsCheriSandbox() ||
+                            Subtarget.usesCheriLoadStoreReplacement()));
   if (GV->getType()->getAddressSpace() == 200)
     return DAG.getNode(ISD::INTTOPTR, SDLoc(N), AddrTy, Global);
   return Global;
@@ -3112,7 +3114,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         IsCallReloc = true;
       } else {
         Callee = getAddrGlobal(G, DL, Ty, DAG, MipsII::MO_GOT_CALL, Chain,
-                               FuncInfo->callPtrInfo(Val));
+                               FuncInfo->callPtrInfo(Val),
+                               (ABI.IsCheriSandbox() ||
+                                Subtarget.usesCheriLoadStoreReplacement()));
         IsCallReloc = true;
       }
     } else
@@ -3133,7 +3137,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       IsCallReloc = true;
     } else { // N64 || PIC
       Callee = getAddrGlobal(S, DL, Ty, DAG, MipsII::MO_GOT_CALL, Chain,
-                             FuncInfo->callPtrInfo(Sym));
+                             FuncInfo->callPtrInfo(Sym),
+                             (ABI.IsCheriSandbox() ||
+                              Subtarget.usesCheriLoadStoreReplacement()));
       IsCallReloc = true;
     }
 

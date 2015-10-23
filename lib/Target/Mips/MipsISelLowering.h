@@ -309,10 +309,11 @@ namespace llvm {
     template <class NodeTy>
     SDValue getAddrGlobal(NodeTy *N, SDLoc DL, EVT Ty, SelectionDAG &DAG,
                           unsigned Flag, SDValue Chain,
-                          const MachinePointerInfo &PtrInfo) const {
+                          const MachinePointerInfo &PtrInfo,
+                          bool intToPtrWrap = false) const {
       SDValue Tgt = DAG.getNode(MipsISD::Wrapper, DL, Ty, getGlobalReg(DAG, Ty),
                                 getTargetNode(N, Ty, DAG, Flag));
-      if (ABI.IsCheriSandbox())
+      if (intToPtrWrap)
         Tgt = DAG.getNode(ISD::INTTOPTR, DL, MVT::iFATPTR, Tgt);
       return DAG.getLoad(Ty, DL, Chain, Tgt, PtrInfo, false, false, false, 0);
     }

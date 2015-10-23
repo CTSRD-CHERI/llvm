@@ -237,6 +237,9 @@ public:
   void addMachineSSAOptimization() override;
   void addPreEmitPass() override;
 
+protected:
+  virtual bool addPreISel() override;
+
   void addPreRegAlloc() override;
 
 };
@@ -309,4 +312,10 @@ void MipsPassConfig::addPreEmitPass() {
   addPass(createMipsDelaySlotFillerPass(TM));
   addPass(createMipsLongBranchPass(TM));
   addPass(createMipsConstantIslandPass(TM));
+}
+
+bool MipsPassConfig::addPreISel() {
+  if (getMipsSubtarget().usesCheriLoadStoreReplacement())
+    addPass(createCheriLoadStoreReplacement());
+  return true;
 }

@@ -40,6 +40,7 @@ namespace llvm {
   ModulePass *createCheriSandboxABI(void);
   MachineFunctionPass *createCheriAddressingModeFolder(void);
   MachineFunctionPass *createCheriBranchFolder(void);
+  BasicBlockPass *createCheriLoadStoreReplacement(void);
 } // end namespace llvm;
 
 #endif
