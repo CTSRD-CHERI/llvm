@@ -208,15 +208,6 @@ SDNode* MipsDAGToDAGISel::Select(SDNode *Node) {
   case ISD::GLOBAL_OFFSET_TABLE:
     return getGlobalBaseReg();
 
-#ifndef NDEBUG
-  case ISD::LOAD:
-  case ISD::STORE:
-    assert((Subtarget->systemSupportsUnalignedAccess() ||
-            cast<MemSDNode>(Node)->getMemoryVT().getSizeInBits() / 8 <=
-            cast<MemSDNode>(Node)->getAlignment()) &&
-           "Unexpected unaligned loads/stores.");
-    break;
-#endif
   }
 
   // Select the default instruction

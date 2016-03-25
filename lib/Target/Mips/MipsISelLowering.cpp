@@ -2416,7 +2416,7 @@ SDValue MipsTargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   LoadSDNode *LD = cast<LoadSDNode>(Op);
   EVT MemVT = LD->getMemoryVT();
 
-  if (Subtarget.systemSupportsUnalignedAccess())
+  if (Subtarget.systemSupportsUnalignedAccess(LD->getAddressSpace()))
     return Op;
 
   // Return if load is aligned or if MemVT is neither i32 nor i64.
