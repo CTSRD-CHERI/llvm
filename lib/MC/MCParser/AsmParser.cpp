@@ -2233,7 +2233,7 @@ bool AsmParser::handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc) {
   // Arbitrarily limit macro nesting depth, to match 'as'. We can eliminate
   // this, although we should protect against infinite loops.
   if (ActiveMacros.size() == 100)
-    return TokError("macros cannot be nested more than 20 levels deep");
+    return TokError("macros cannot be nested more than 100 levels deep");
 
   MCAsmMacroArguments A;
   if (parseMacroArguments(M, A))
