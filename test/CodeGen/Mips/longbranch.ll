@@ -3,11 +3,11 @@
 ; RUN:   | FileCheck %s -check-prefix=O32
 ; RUN: llc -march=mipsel -mcpu=mips32r6 -force-mips-long-branch -O3 \
 ; RUN:   -relocation-model=pic -asm-show-inst < %s | FileCheck %s -check-prefix=O32-R6
-; RUN: llc -march=mips64el -mcpu=mips4 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
+; RUN: llc -march=mips64el -mcpu=mips4 -mabi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
 ; RUN:   < %s | FileCheck %s -check-prefix=N64
-; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
+; RUN: llc -march=mips64el -mcpu=mips64 -mabi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
 ; RUN:   < %s | FileCheck %s -check-prefix=N64
-; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 -force-mips-long-branch -O3 \
+; RUN: llc -march=mips64el -mcpu=mips64r6 -mabi=n64 -force-mips-long-branch -O3 \
 ; RUN:   -relocation-model=pic -asm-show-inst < %s | FileCheck %s -check-prefix=N64-R6
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=micromips \
 ; RUN:   -force-mips-long-branch -O3 -relocation-model=pic < %s | FileCheck %s -check-prefix=MICROMIPS

@@ -1,9 +1,9 @@
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -target-abi=o32 | FileCheck %s --check-prefixes=ALL,O32-N32-NO-PIC
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -target-abi=o32 -position-independent | FileCheck %s --check-prefixes=ALL,O32-N32-PIC
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -target-abi=n32 | FileCheck %s --check-prefixes=ALL,O32-N32-NO-PIC
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -target-abi=n32 -position-independent | FileCheck %s --check-prefixes=ALL,O32-N32-PIC
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -target-abi=n64 | FileCheck %s --check-prefixes=ALL,N64-NO-PIC
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -target-abi=n64 -position-independent | FileCheck %s --check-prefixes=ALL,N64-PIC
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mabi=o32 | FileCheck %s --check-prefixes=ALL,O32,O32-N32-NO-PIC
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mabi=o32 -position-independent | FileCheck %s --check-prefixes=ALL,O32,O32-N32-PIC
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -mabi=n32 | FileCheck %s --check-prefixes=ALL,O32-N32-NO-PIC,N32-N64
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -mabi=n32 -position-independent | FileCheck %s --check-prefixes=ALL,O32-N32-PIC,N32-N64
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -mabi=n64 | FileCheck %s --check-prefixes=ALL,N64-NO-PIC,N32-N64
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -mabi=n64 -position-independent | FileCheck %s --check-prefixes=ALL,N64-PIC,N32-N64
 
 li.s	$4, 0
 # ALL:   addiu   $4, $zero, 0                # encoding: [0x00,0x00,0x04,0x24]

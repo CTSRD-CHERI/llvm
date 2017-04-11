@@ -5,18 +5,18 @@
 ; IEEE 754 (1985) and IEEE 754 (2008). These instructions are therefore only
 ; available when -enable-no-nans-fp-math is given.
 
-; RUN: llc < %s -march=mipsel   -mcpu=mips32              -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,32,32-NONAN
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r2            -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,32R2,32R2-NONAN
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r6            -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,32R6,32R6-NONAN
-; RUN: llc < %s -march=mips64el -mcpu=mips64   -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,64,64-NONAN
-; RUN: llc < %s -march=mips64el -mcpu=mips64r2 -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,64R2,64R2-NONAN
-; RUN: llc < %s -march=mips64el -mcpu=mips64r6 -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,64R6,64R6-NONAN
-; RUN: llc < %s -march=mipsel   -mcpu=mips32              | FileCheck %s -check-prefixes=ALL,32,32-NAN
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r2            | FileCheck %s -check-prefixes=ALL,32R2,32R2-NAN
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r6            | FileCheck %s -check-prefixes=ALL,32R6,32R6-NAN
-; RUN: llc < %s -march=mips64el -mcpu=mips64   -target-abi=n64 | FileCheck %s -check-prefixes=ALL,64,64-NAN
-; RUN: llc < %s -march=mips64el -mcpu=mips64r2 -target-abi=n64 | FileCheck %s -check-prefixes=ALL,64R2,64R2-NAN
-; RUN: llc < %s -march=mips64el -mcpu=mips64r6 -target-abi=n64 | FileCheck %s -check-prefixes=ALL,64R6,64R6-NAN
+; RUN: llc < %s -march=mipsel   -mcpu=mips32             -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,32,32-NONAN
+; RUN: llc < %s -march=mipsel   -mcpu=mips32r2           -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,32R2,32R2-NONAN
+; RUN: llc < %s -march=mipsel   -mcpu=mips32r6           -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,32R6,32R6-NONAN
+; RUN: llc < %s -march=mips64el -mcpu=mips64   -mabi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,64,64-NONAN
+; RUN: llc < %s -march=mips64el -mcpu=mips64r2 -mabi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,64R2,64R2-NONAN
+; RUN: llc < %s -march=mips64el -mcpu=mips64r6 -mabi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,64R6,64R6-NONAN
+; RUN: llc < %s -march=mipsel   -mcpu=mips32             | FileCheck %s -check-prefixes=ALL,32,32-NAN
+; RUN: llc < %s -march=mipsel   -mcpu=mips32r2           | FileCheck %s -check-prefixes=ALL,32R2,32R2-NAN
+; RUN: llc < %s -march=mipsel   -mcpu=mips32r6           | FileCheck %s -check-prefixes=ALL,32R6,32R6-NAN
+; RUN: llc < %s -march=mips64el -mcpu=mips64   -mabi=n64 | FileCheck %s -check-prefixes=ALL,64,64-NAN
+; RUN: llc < %s -march=mips64el -mcpu=mips64r2 -mabi=n64 | FileCheck %s -check-prefixes=ALL,64R2,64R2-NAN
+; RUN: llc < %s -march=mips64el -mcpu=mips64r6 -mabi=n64 | FileCheck %s -check-prefixes=ALL,64R6,64R6-NAN
 
 define float @FOO0float(float %a, float %b, float %c) nounwind readnone {
 entry:

@@ -1,19 +1,19 @@
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MIPS,O32
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 -show-encoding |\
+# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -mabi n32 -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MIPS,N32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -show-encoding |\
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -mabi n64 -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MIPS,N64
 
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MM,O32-MM
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 -mattr=micromips -show-encoding |\
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -mabi n32 -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MM,N32-MM
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -mattr=micromips -show-encoding |\
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -mabi n64 -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MM,N64-MM
 
 # Repeat the tests but using ELF output. An initial version of this patch did
@@ -23,9 +23,9 @@
 
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -filetype=obj | \
 # RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-O32
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 -filetype=obj | \
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -mabi n32 -filetype=obj | \
 # RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-N32
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -filetype=obj | \
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -mabi n64 -filetype=obj | \
 # RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-N64
 
   .weak weak_label
