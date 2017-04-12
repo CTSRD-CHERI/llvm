@@ -290,6 +290,54 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::GNUEABI, T.getEnvironment());
 
+  T = Triple("mips-mti-linux-gnu");
+  EXPECT_EQ(Triple::mips, T.getArch());
+  EXPECT_EQ(Triple::MipsTechnologies, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+
+  T = Triple("mipsel-img-linux-gnu");
+  EXPECT_EQ(Triple::mipsel, T.getArch());
+  EXPECT_EQ(Triple::ImaginationTechnologies, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+
+  T = Triple("mips64-mti-linux-gnu");
+  EXPECT_EQ(Triple::mips64, T.getArch());
+  EXPECT_EQ(Triple::MipsTechnologies, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+
+  T = Triple("mips64el-img-linux-gnu");
+  EXPECT_EQ(Triple::mips64el, T.getArch());
+  EXPECT_EQ(Triple::ImaginationTechnologies, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+
+  T = Triple("mips64el-img-linux-gnuabin32");
+  EXPECT_EQ(Triple::mips64el, T.getArch());
+  EXPECT_EQ(Triple::ImaginationTechnologies, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUABIN32, T.getEnvironment());
+
+  T = Triple("mips64el-unknown-linux-gnuabi64");
+  EXPECT_EQ(Triple::mips64el, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUABI64, T.getEnvironment());
+
+  T = Triple("cheri-unknown-linux");
+  EXPECT_EQ(Triple::cheri, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("cheri-unknown-linux-purecap");
+  EXPECT_EQ(Triple::cheri, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::Purecap, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
 }
@@ -845,6 +893,155 @@ TEST(TripleTest, EndianArchVariants) {
   T.setArch(Triple::le64);
   EXPECT_EQ(Triple::UnknownArch, T.getBigEndianArchVariant().getArch());
   EXPECT_EQ(Triple::le64, T.getLittleEndianArchVariant().getArch());
+}
+
+TEST(TripleTest, ABIVariants) {
+  Triple T, MutatedT;
+  StringRef MutatedABI;
+  EXPECT_EQ(Triple::UnknownArch, T.getABIVariant("").first.getArch());
+  EXPECT_EQ(Triple::UnknownArch, T.getABIVariant("32").first.getArch());
+
+  T.setArch(Triple::UnknownArch);
+  EXPECT_EQ(Triple::UnknownArch, T.getABIVariant("").first.getArch());
+  EXPECT_EQ(Triple::UnknownArch, T.getABIVariant("32").first.getArch());
+
+  // Try a triple that doesn't mutate the triple in getABIVariant().
+  // This should leave the triple and abi unchanged.
+  T = Triple("x86_64-pc-linux-gnu");
+  std::tie(MutatedT, MutatedABI) = T.getABIVariant("");
+  EXPECT_EQ(T, MutatedT);
+  EXPECT_EQ("", MutatedABI);
+
+  // Try an unsupported ABI name. This should change the arch component of the
+  // triple to UnknownArch. Other parts of the result are undefined.
+  std::tie(MutatedT, MutatedABI) = T.getABIVariant("32");
+  EXPECT_EQ(Triple::UnknownArch, MutatedT.getArch());
+
+  for (const auto &TripleStr :
+       {"mips-linux-gnu", "mipsel-linux-gnu", "mips-mti-linux-gnu",
+        "mipsel-img-linux-gnu", "mips64-linux-gnu", "mips64el-linux-gnu",
+        "mips64-mti-linux-gnu", "mips64el-img-linux-gnu"}) {
+    T = Triple(Triple::normalize(TripleStr));
+    std::pair<Triple, StringRef> Default = T.getABIVariant("");
+    std::pair<Triple, StringRef> O32 = T.getABIVariant("o32");
+    std::pair<Triple, StringRef> N32 = T.getABIVariant("n32");
+    std::pair<Triple, StringRef> N64 = T.getABIVariant("n64");
+
+    EXPECT_EQ(T.getArch(), Default.first.getArch());
+    EXPECT_EQ(T.get32BitArchVariant().getArch(), O32.first.getArch());
+    EXPECT_EQ(T.get64BitArchVariant().getArch(), N32.first.getArch());
+    EXPECT_EQ(T.get64BitArchVariant().getArch(), N64.first.getArch());
+
+    EXPECT_EQ(T.getVendor(), Default.first.getVendor());
+    EXPECT_EQ(T.getVendor(), O32.first.getVendor());
+    EXPECT_EQ(T.getVendor(), N32.first.getVendor());
+    EXPECT_EQ(T.getVendor(), N64.first.getVendor());
+
+    EXPECT_EQ(T.getOS(), Default.first.getOS());
+    EXPECT_EQ(T.getOS(), O32.first.getOS());
+    EXPECT_EQ(T.getOS(), N32.first.getOS());
+    EXPECT_EQ(T.getOS(), N64.first.getOS());
+
+    EXPECT_EQ((T.getArch() == Triple::mips64 || T.getArch() == Triple::mips64el)
+                  ? Triple::GNUABI64
+                  : Triple::GNUABI32,
+              Default.first.getEnvironment());
+    EXPECT_EQ(Triple::GNUABI32, O32.first.getEnvironment());
+    EXPECT_EQ(Triple::GNUABIN32, N32.first.getEnvironment());
+    EXPECT_EQ(Triple::GNUABI64, N64.first.getEnvironment());
+
+    EXPECT_EQ("", Default.second);
+    EXPECT_EQ("", O32.second);
+    EXPECT_EQ("", N32.second);
+    EXPECT_EQ("", N64.second);
+
+    // Try an unsupported ABI name. This should change the arch component of the
+    // triple to UnknownArch. Other values are undefined.
+    std::pair<Triple, StringRef> Foo = T.getABIVariant("foo");
+    EXPECT_EQ(Triple::UnknownArch, Foo.first.getArch());
+  }
+
+  for (const auto &TripleStr :
+       {"mipsel-linux-android", "mips64el-linux-android"}) {
+    T = Triple(Triple::normalize(TripleStr));
+    std::pair<Triple, StringRef> Default = T.getABIVariant("");
+    std::pair<Triple, StringRef> O32 = T.getABIVariant("o32");
+    std::pair<Triple, StringRef> N32 = T.getABIVariant("n32");
+    std::pair<Triple, StringRef> N64 = T.getABIVariant("n64");
+
+    EXPECT_EQ(T.getArch(), Default.first.getArch());
+    EXPECT_EQ(T.get32BitArchVariant().getArch(), O32.first.getArch());
+    EXPECT_EQ(T.get64BitArchVariant().getArch(), N64.first.getArch());
+
+    EXPECT_EQ(T.getVendor(), Default.first.getVendor());
+    EXPECT_EQ(T.getVendor(), O32.first.getVendor());
+    EXPECT_EQ(T.getVendor(), N64.first.getVendor());
+
+    EXPECT_EQ(T.getOS(), Default.first.getOS());
+    EXPECT_EQ(T.getOS(), O32.first.getOS());
+    EXPECT_EQ(T.getOS(), N64.first.getOS());
+
+    EXPECT_EQ((T.getArch() == Triple::mips64 || T.getArch() == Triple::mips64el)
+                  ? Triple::AndroidABI64
+                  : Triple::AndroidABI32,
+              Default.first.getEnvironment());
+    EXPECT_EQ(Triple::AndroidABI32, O32.first.getEnvironment());
+    EXPECT_EQ(Triple::AndroidABI64, N64.first.getEnvironment());
+
+    EXPECT_EQ("", Default.second);
+    EXPECT_EQ("", O32.second);
+    EXPECT_EQ("", N64.second);
+
+    // Try an unsupported ABI name. This should change the arch component of the
+    // triple to UnknownArch. Other values are undefined.
+    std::pair<Triple, StringRef> Foo = T.getABIVariant("foo");
+    EXPECT_EQ(Triple::UnknownArch, Foo.first.getArch());
+
+    // N32 is known to LLVM but unsupported for Android.
+    EXPECT_EQ(Triple::UnknownArch, N32.first.getArch());
+  }
+
+  for (const auto &TripleStr :
+       {"mips-linux", "mipsel-linux", "mips-mti-linux", "mipsel-img-linux",
+        "mips-unknown-freebsd", "mips64-linux", "mips64el-linux",
+        "mips64-mti-linux", "mips64el-img-linux", "mips64-unknown-freebsd"}) {
+    T = Triple(Triple::normalize(TripleStr));
+    std::pair<Triple, StringRef> Default = T.getABIVariant("");
+    std::pair<Triple, StringRef> O32 = T.getABIVariant("o32");
+    std::pair<Triple, StringRef> N32 = T.getABIVariant("n32");
+    std::pair<Triple, StringRef> N64 = T.getABIVariant("n64");
+    std::pair<Triple, StringRef> Foo = T.getABIVariant("foo");
+
+    EXPECT_EQ(T.getArch(), Default.first.getArch());
+    EXPECT_EQ(T.get32BitArchVariant().getArch(), O32.first.getArch());
+    EXPECT_EQ(T.get64BitArchVariant().getArch(), N32.first.getArch());
+    EXPECT_EQ(T.get64BitArchVariant().getArch(), N64.first.getArch());
+    EXPECT_EQ(Triple::UnknownArch, Foo.first.getArch());
+
+    EXPECT_EQ(T.getVendor(), Default.first.getVendor());
+    EXPECT_EQ(T.getVendor(), O32.first.getVendor());
+    EXPECT_EQ(T.getVendor(), N32.first.getVendor());
+    EXPECT_EQ(T.getVendor(), N64.first.getVendor());
+
+    EXPECT_EQ(T.getOS(), Default.first.getOS());
+    EXPECT_EQ(T.getOS(), O32.first.getOS());
+    EXPECT_EQ(T.getOS(), N32.first.getOS());
+    EXPECT_EQ(T.getOS(), N64.first.getOS());
+
+    EXPECT_EQ((T.getArch() == Triple::mips64 || T.getArch() == Triple::mips64el)
+                  ? Triple::ABI64
+                  : Triple::ABI32,
+              Default.first.getEnvironment());
+    EXPECT_EQ(Triple::ABI32, O32.first.getEnvironment());
+    EXPECT_EQ(Triple::ABIN32, N32.first.getEnvironment());
+    EXPECT_EQ(Triple::ABI64, N64.first.getEnvironment());
+
+    EXPECT_EQ("", Default.second);
+    EXPECT_EQ("", O32.second);
+    EXPECT_EQ("", N32.second);
+    EXPECT_EQ("", N64.second);
+    EXPECT_EQ("foo", Foo.second);
+  }
 }
 
 TEST(TripleTest, getOSVersion) {

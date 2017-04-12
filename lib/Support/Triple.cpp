@@ -214,7 +214,12 @@ StringRef Triple::getOSTypeName(OSType Kind) {
 StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   switch (Kind) {
   case UnknownEnvironment: return "unknown";
+  case ABI32: return "abi32";
+  case ABIN32: return "abin32";
+  case ABI64: return "abi64";
   case GNU: return "gnu";
+  case GNUABI32: return "gnuabi32";
+  case GNUABIN32: return "gnuabin32";
   case GNUABI64: return "gnuabi64";
   case GNUEABIHF: return "gnueabihf";
   case GNUEABI: return "gnueabi";
@@ -223,6 +228,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case EABI: return "eabi";
   case EABIHF: return "eabihf";
   case Android: return "android";
+  case AndroidABI32: return "androidabi32";
+  case AndroidABI64: return "androidabi64";
   case Musl: return "musl";
   case MuslEABI: return "musleabi";
   case MuslEABIHF: return "musleabihf";
@@ -232,6 +239,7 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case AMDOpenCL: return "amdopencl";
   case CoreCLR: return "coreclr";
   case OpenCL: return "opencl";
+  case Purecap: return "purecap";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -495,14 +503,21 @@ static Triple::OSType parseOS(StringRef OSName) {
 
 static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
   return StringSwitch<Triple::EnvironmentType>(EnvironmentName)
+    .StartsWith("abi32", Triple::ABI32)
+    .StartsWith("abin32", Triple::ABIN32)
+    .StartsWith("abi64", Triple::ABI64)
     .StartsWith("eabihf", Triple::EABIHF)
     .StartsWith("eabi", Triple::EABI)
+    .StartsWith("gnuabi32", Triple::GNUABI32)
+    .StartsWith("gnuabin32", Triple::GNUABIN32)
     .StartsWith("gnuabi64", Triple::GNUABI64)
     .StartsWith("gnueabihf", Triple::GNUEABIHF)
     .StartsWith("gnueabi", Triple::GNUEABI)
     .StartsWith("gnux32", Triple::GNUX32)
     .StartsWith("code16", Triple::CODE16)
     .StartsWith("gnu", Triple::GNU)
+    .StartsWith("androidabi32", Triple::AndroidABI32)
+    .StartsWith("androidabi64", Triple::AndroidABI64)
     .StartsWith("android", Triple::Android)
     .StartsWith("musleabihf", Triple::MuslEABIHF)
     .StartsWith("musleabi", Triple::MuslEABI)
@@ -513,6 +528,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
     .StartsWith("amdopencl", Triple::AMDOpenCL)
     .StartsWith("coreclr", Triple::CoreCLR)
     .StartsWith("opencl", Triple::OpenCL)
+    .StartsWith("purecap", Triple::Purecap)
     .Default(Triple::UnknownEnvironment);
 }
 
@@ -1510,6 +1526,105 @@ std::string Triple::merge(const Triple &Other) const {
       return str();
 
   return Other.str();
+}
+
+std::pair<llvm::Triple, StringRef> Triple::getABIVariant(StringRef ABI) const {
+  Triple T(*this);
+  switch (getArch()) {
+  default:
+    if (ABI == "")
+      return std::make_pair(T, ABI);
+    T.setArch(Triple::UnknownArch);
+    return std::make_pair(T, ABI);
+
+  case Triple::arm:
+  case Triple::armeb:
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+  case Triple::thumb:
+  case Triple::thumbeb:
+    if (ABI == "" || ABI == "aapcs16" || ABI == "darwinpcs" || ABI == "ilp32" ||
+        ABI.startswith("apcs") || ABI.startswith("aapcs"))
+      return std::make_pair(T, ABI);
+    T.setArch(Triple::UnknownArch);
+    return std::make_pair(T, ABI);
+
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    if (ABI == "" || ABI.startswith("elfv1") || ABI.startswith("elfv2"))
+      return std::make_pair(T, ABI);
+    T.setArch(Triple::UnknownArch);
+    return std::make_pair(T, ABI);
+
+  case Triple::cheri:
+    if (ABI == "" || ABI.startswith("sandbox") || ABI.startswith("purecap") ||
+        ABI.startswith("n64") || ABI.startswith("n32"))
+      return std::make_pair(T, ABI);
+    T.setArch(Triple::UnknownArch);
+    return std::make_pair(T, ABI);
+
+  case Triple::mips:
+  case Triple::mipsel:
+  case Triple::mips64:
+  case Triple::mips64el: {
+    EnvironmentType NewEnv;
+
+    if (ABI == "")
+      ABI = (getArch() == Triple::mips || getArch() == Triple::mipsel) ? "o32" : "n64";
+
+    switch (T.getEnvironment()) {
+    default:
+      T.setArch(Triple::UnknownArch);
+      return std::make_pair(T, ABI);
+
+    case Triple::Android:
+    case Triple::AndroidABI64:
+      NewEnv = StringSwitch<EnvironmentType>(ABI)
+                   .Case("o32", Triple::AndroidABI32)
+                   .Case("n64", Triple::AndroidABI64)
+                   .Default(Triple::UnknownEnvironment);
+      break;
+    case Triple::UnknownEnvironment:
+    case Triple::ABI32:
+    case Triple::ABIN32:
+    case Triple::ABI64:
+      NewEnv = StringSwitch<EnvironmentType>(ABI)
+                   .Case("o32", Triple::ABI32)
+                   .Case("n32", Triple::ABIN32)
+                   .Case("n64", Triple::ABI64)
+                   .Default(Triple::UnknownEnvironment);
+      break;
+
+    case Triple::GNU:
+    case Triple::GNUABI32:
+    case Triple::GNUABIN32:
+    case Triple::GNUABI64:
+      NewEnv = StringSwitch<EnvironmentType>(ABI)
+                   .Case("o32", Triple::GNUABI32)
+                   .Case("n32", Triple::GNUABIN32)
+                   .Case("n64", Triple::GNUABI64)
+                   .Default(Triple::UnknownEnvironment);
+      break;
+    }
+
+    if (NewEnv == Triple::UnknownEnvironment) {
+      T.setArch(Triple::UnknownArch);
+      return std::make_pair(T, ABI);
+    }
+
+    // We have to keep the Arch and Environment in sync at the moment due to
+    // a false correlation between mips/mipsel and O32 and mips64/mips64el and
+    // N64 that is required by the MIPS backend.
+    if (ABI == "o32")
+      T = T.get32BitArchVariant();
+    else if (ABI == "n32" || ABI == "n64")
+      T = T.get64BitArchVariant();
+
+    if (NewEnv != T.getEnvironment())
+      T.setEnvironment(NewEnv);
+    return std::make_pair(T, "");
+  }
+  }
 }
 
 StringRef Triple::getARMCPUForArch(StringRef MArch) const {

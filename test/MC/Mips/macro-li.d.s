@@ -18,7 +18,8 @@ li.d	$4, 0.0
 
 li.d	$4, 1.12345
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1072822694
 # ALL:	.4byte	3037400872
 # ALL:	.text
@@ -58,7 +59,8 @@ li.d	$4, 1.0
 
 li.d	$4, 12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790602240
 # ALL:	.text
@@ -90,7 +92,8 @@ li.d	$4, 12345678910
 
 li.d	$4, 12345678910.0
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790602240
 # ALL:	.text
@@ -122,7 +125,8 @@ li.d	$4, 12345678910.0
 
 li.d	$4, 0.4
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1071225241
 # ALL:	.4byte	2576980378
 # ALL:	.text
@@ -158,7 +162,8 @@ li.d	$4, 1.5
 
 li.d	$4, 12345678910.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790666967
 # ALL:	.text
@@ -191,7 +196,8 @@ li.d	$4, 12345678910.12345678910
 
 li.d	$4, 12345678910123456789.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1139108501
 # ALL:	.4byte	836738583
 # ALL:	.text
@@ -243,7 +249,8 @@ li.d	$f4, 0.0
 
 li.d	$f4, 1.12345
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1072822694
 # ALL:	.4byte	3037400872
 # ALL:	.text
@@ -286,7 +293,8 @@ li.d	$f4, 1.0
 
 li.d	$f4, 12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790602240
 # ALL:	.text
@@ -309,7 +317,8 @@ li.d	$f4, 12345678910
 
 li.d	$f4, 12345678910.0
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790602240
 # ALL:	.text
@@ -332,7 +341,8 @@ li.d	$f4, 12345678910.0
 
 li.d	$f4, 0.4
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1071225241
 # ALL:	.4byte	2576980378
 # ALL:	.text
@@ -375,7 +385,8 @@ li.d	$f4, 2.5
 
 li.d	$f4, 2.515625
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1074012160
 # ALL:	.4byte	0
 # ALL:	.text
@@ -398,7 +409,8 @@ li.d	$f4, 2.515625
 
 li.d	$f4, 12345678910.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790666967
 # ALL:	.text
@@ -421,7 +433,8 @@ li.d	$f4, 12345678910.12345678910
 
 li.d	$f4, 12345678910123456789.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1139108501
 # ALL:	.4byte	836738583
 # ALL:	.text
