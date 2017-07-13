@@ -1,6 +1,6 @@
-; RUN: llc -mtriple armv7 -target-abi aapcs -float-abi soft -O0 -o - < %s \
+; RUN: llc -mtriple armv7 -mabi=aapcs -float-abi soft -O0 -o - < %s \
 ; RUN:   | FileCheck %s -check-prefix CHECK-SOFT -check-prefix CHECK
-; RUN: llc -mtriple armv7 -target-abi aapcs -float-abi hard -O0 -o - < %s \
+; RUN: llc -mtriple armv7 -mabi=aapcs -float-abi hard -O0 -o - < %s \
 ; RUN:   | FileCheck %s -check-prefix CHECK-HARD -check-prefix CHECK
 
 ; Tests for passing floating-point regs. Variadic functions will always use

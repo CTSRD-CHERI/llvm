@@ -1,8 +1,8 @@
 # RUN: llvm-mc -triple mips-mti-linux-gnu -show-encoding %s | FileCheck \
 # RUN:         --check-prefixes=ALL,32 %s
-# RUN: llvm-mc -triple mips64-mti-linux-gnu -show-encoding %s -target-abi n64 \
+# RUN: llvm-mc -triple mips64-mti-linux-gnu -show-encoding %s -mabi=n64 \
 # RUN:         | FileCheck --check-prefixes=ALL,64 %s
-# RUN: llvm-mc -triple mips64-mti-linux-gnu -show-encoding %s -target-abi n32 \
+# RUN: llvm-mc -triple mips64-mti-linux-gnu -show-encoding %s -mabi=n32 \
 # RUN:         | FileCheck --check-prefixes=ALL,64 %s
 
 # ALL:  .text

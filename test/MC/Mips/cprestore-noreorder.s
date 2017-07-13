@@ -10,10 +10,10 @@
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -show-encoding | \
 # RUN:  FileCheck %s -check-prefix=NO-PIC
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 --position-independent -show-encoding | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -mabi=n32 --position-independent -show-encoding | \
 # RUN:  FileCheck %s -check-prefixes=BAD-ABI,BAD-ABI-N32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 --position-independent -show-encoding | \
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -mabi=n64 --position-independent -show-encoding | \
 # RUN:  FileCheck %s -check-prefixes=BAD-ABI,BAD-ABI-N64
 
   .text

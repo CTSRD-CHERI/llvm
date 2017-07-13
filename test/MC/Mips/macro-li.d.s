@@ -1,10 +1,10 @@
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32 -target-abi=o32  | FileCheck %s --check-prefixes=ALL,O32-N32-NO-PIC,O32
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32r2 -target-abi=o32 | FileCheck %s --check-prefixes=ALL,CHECK-MIPS32r2
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32 -target-abi=o32 -position-independent | FileCheck %s --check-prefixes=ALL,O32-N32-PIC,O32
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -target-abi=n32 | FileCheck %s --check-prefixes=ALL,O32-N32-NO-PIC,N32-N64
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -target-abi=n32 -position-independent | FileCheck %s --check-prefixes=ALL,O32-N32-PIC,N32-N64
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -target-abi=n64 | FileCheck %s --check-prefixes=ALL,N64-NO-PIC,N32-N64
-# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -target-abi=n64 -position-independent | FileCheck %s --check-prefixes=ALL,N64-PIC,N32-N64
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32 -mabi=o32  | FileCheck %s --check-prefixes=ALL,O32-N32-NO-PIC,O32,O32-32BIT-FPR
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32r2 -mabi=o32 | FileCheck %s --check-prefixes=ALL,CHECK-MIPS32r2,O32,O32-64BIT-FPR
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32 -mabi=o32 -position-independent | FileCheck %s --check-prefixes=ALL,O32-N32-PIC,O32
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -mabi=n32 | FileCheck %s --check-prefixes=ALL,O32-N32-NO-PIC,N32-N64
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -mabi=n32 -position-independent | FileCheck %s --check-prefixes=ALL,O32-N32-PIC,N32-N64
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -mabi=n64 | FileCheck %s --check-prefixes=ALL,N64-NO-PIC,N32-N64
+# RUN: llvm-mc  %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips64 -mabi=n64 -position-independent | FileCheck %s --check-prefixes=ALL,N64-PIC,N32-N64
 
 li.d	$4, 0
 # O32:     addiu   $4, $zero, 0                # encoding: [0x00,0x00,0x04,0x24]
@@ -18,7 +18,8 @@ li.d	$4, 0.0
 
 li.d	$4, 1.12345
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1072822694
 # ALL:	.4byte	3037400872
 # ALL:	.text
@@ -58,7 +59,8 @@ li.d	$4, 1.0
 
 li.d	$4, 12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790602240
 # ALL:	.text
@@ -90,7 +92,8 @@ li.d	$4, 12345678910
 
 li.d	$4, 12345678910.0
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790602240
 # ALL:	.text
@@ -122,7 +125,8 @@ li.d	$4, 12345678910.0
 
 li.d	$4, 0.4
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1071225241
 # ALL:	.4byte	2576980378
 # ALL:	.text
@@ -158,7 +162,8 @@ li.d	$4, 1.5
 
 li.d	$4, 12345678910.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790666967
 # ALL:	.text
@@ -191,7 +196,8 @@ li.d	$4, 12345678910.12345678910
 
 li.d	$4, 12345678910123456789.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1139108501
 # ALL:	.4byte	836738583
 # ALL:	.text
@@ -222,28 +228,29 @@ li.d	$4, 12345678910123456789.12345678910
 # N32-N64:         ld      $4, 0($1)                  # encoding: [0x00,0x00,0x24,0xdc]
 
 li.d	$f4, 0
-# O32:            addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
-# O32:            mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
-# O32:            mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
-# CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
+# O32-32BIT-FPR:  addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
+# O32-32BIT-FPR:  mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
+# O32-32BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
+# O32-64BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
 # N32-N64:        addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 0.0
-# O32:            addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
-# O32:            mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
-# O32:            mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
-# CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
+# O32-32BIT-FPR:  addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
+# O32-32BIT-FPR:  mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
+# O32-32BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
+# O32-64BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
 # N32-N64:        addiu   $1, $zero, 0       # encoding: [0x00,0x00,0x01,0x24]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 1.12345
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1072822694
 # ALL:	.4byte	3037400872
 # ALL:	.text
@@ -265,28 +272,29 @@ li.d	$f4, 1.12345
 # ALL:                                                #   fixup A - offset: 0, value: %lo([[LABEL]]), kind: fixup_Mips_LO16
 
 li.d	$f4, 1
-# O32:            lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
-# O32:            mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
-# O32:            mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
-# CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
+# O32-32BIT-FPR:  lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
+# O32-32BIT-FPR:  mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
+# O32-32BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
+# O32-64BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
 # N32-N64:        lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 1.0
-# O32:            lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
-# O32:            mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
-# O32:            mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
-# CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
+# O32-32BIT-FPR:  lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
+# O32-32BIT-FPR:  mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
+# O32-32BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
+# O32-64BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
 # N32-N64:        lui     $1, 16368          # encoding: [0xf0,0x3f,0x01,0x3c]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790602240
 # ALL:	.text
@@ -309,7 +317,8 @@ li.d	$f4, 12345678910
 
 li.d	$f4, 12345678910.0
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790602240
 # ALL:	.text
@@ -332,7 +341,8 @@ li.d	$f4, 12345678910.0
 
 li.d	$f4, 0.4
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1071225241
 # ALL:	.4byte	2576980378
 # ALL:	.text
@@ -354,28 +364,29 @@ li.d	$f4, 0.4
 # ALL:                                                #   fixup A - offset: 0, value: %lo([[LABEL]]), kind: fixup_Mips_LO16
 
 li.d	$f4, 1.5
-# O32:            lui     $1, 16376          # encoding: [0xf8,0x3f,0x01,0x3c]
-# O32:            mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
-# O32:            mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: lui     $1, 16376          # encoding: [0xf8,0x3f,0x01,0x3c]
-# CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
+# O32-32BIT-FPR:  lui     $1, 16376          # encoding: [0xf8,0x3f,0x01,0x3c]
+# O32-32BIT-FPR:  mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
+# O32-32BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  lui     $1, 16376          # encoding: [0xf8,0x3f,0x01,0x3c]
+# O32-64BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
 # N32-N64:        lui     $1, 16376          # encoding: [0xf8,0x3f,0x01,0x3c]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 2.5
-# O32:            lui     $1, 16388          # encoding: [0x04,0x40,0x01,0x3c]
-# O32:            mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
-# O32:            mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: lui     $1, 16388          # encoding: [0x04,0x40,0x01,0x3c]
-# CHECK-MIPS32r2: mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
-# CHECK-MIPS32r2: mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
+# O32-32BIT-FPR:  lui     $1, 16388          # encoding: [0x04,0x40,0x01,0x3c]
+# O32-32BIT-FPR:  mtc1    $1, $f5            # encoding: [0x00,0x28,0x81,0x44]
+# O32-32BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  lui     $1, 16388          # encoding: [0x04,0x40,0x01,0x3c]
+# O32-64BIT-FPR:  mtc1    $zero, $f4         # encoding: [0x00,0x20,0x80,0x44]
+# O32-64BIT-FPR:  mthc1   $1, $f4            # encoding: [0x00,0x20,0xe1,0x44]
 # N32-N64:        lui     $1, 16388          # encoding: [0x04,0x40,0x01,0x3c]
 # N32-N64:        dmtc1   $1, $f4            # encoding: [0x00,0x20,0xa1,0x44]
 
 li.d	$f4, 2.515625
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1074012160
 # ALL:	.4byte	0
 # ALL:	.text
@@ -398,7 +409,8 @@ li.d	$f4, 2.515625
 
 li.d	$f4, 12345678910.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1107754720
 # ALL:	.4byte	3790666967
 # ALL:	.text
@@ -421,7 +433,8 @@ li.d	$f4, 12345678910.12345678910
 
 li.d	$f4, 12345678910123456789.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1139108501
 # ALL:	.4byte	836738583
 # ALL:	.text

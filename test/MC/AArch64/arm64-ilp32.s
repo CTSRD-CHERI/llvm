@@ -1,4 +1,4 @@
-// RUN: llvm-mc -target-abi=ilp32 -triple aarch64-non-linux-gnu -filetype=obj \
+// RUN: llvm-mc -mabi=ilp32 -triple aarch64-non-linux-gnu -filetype=obj \
 // RUN:  %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-ILP32 %s
 // RUN: llvm-mc                   -triple aarch64-non-linux-gnu -filetype=obj \
 // RUN:  %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-LP64 %s

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=mips64el -filetype=obj -mcpu=mips64r2 -target-abi=n64 %s -o - \
+# RUN: llvm-mc -arch=mips64el -filetype=obj -mcpu=mips64r2 -mabi=n64 %s -o - \
 # RUN:   | llvm-objdump -disassemble - | FileCheck %s
 
         dext $2, $4, 5, 10   # CHECK: dext ${{[0-9]+}}, ${{[0-9]+}}, 5, 10

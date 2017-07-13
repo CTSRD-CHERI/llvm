@@ -4,7 +4,7 @@
 ; RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips \
 ; RUN:   -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,MM32
-; RUN: llc -march=mips -mcpu=mips64r6 -mattr=+micromips -target-abi n64 \
+; RUN: llc -march=mips -mcpu=mips64r6 -mattr=+micromips -mabi=n64 \
 ; RUN:   -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,MM64
 

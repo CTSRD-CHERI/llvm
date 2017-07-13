@@ -56,11 +56,6 @@ cl::alias NoWarnW("W", cl::desc("Alias for --no-warn"), cl::aliasopt(NoWarn));
 cl::opt<bool> NoDeprecatedWarn("no-deprecated-warn",
                                cl::desc("Suppress all deprecated warnings"));
 
-cl::opt<std::string>
-ABIName("target-abi", cl::Hidden,
-        cl::desc("The name of the ABI to be targeted from the backend."),
-        cl::init(""));
-
 static inline MCTargetOptions InitMCTargetOptionsFromFlags() {
   MCTargetOptions Options;
   Options.SanitizeAddress =
@@ -70,7 +65,6 @@ static inline MCTargetOptions InitMCTargetOptionsFromFlags() {
   Options.MCPIECopyRelocations = PIECopyRelocations;
   Options.DwarfVersion = DwarfVersion;
   Options.ShowMCInst = ShowMCInst;
-  Options.ABIName = ABIName;
   Options.MCFatalWarnings = FatalWarnings;
   Options.MCNoWarn = NoWarn;
   Options.MCNoDeprecatedWarn = NoDeprecatedWarn;

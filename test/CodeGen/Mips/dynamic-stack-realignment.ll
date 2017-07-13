@@ -10,11 +10,11 @@
 ; RUN:    --check-prefixes=ALL,GP64,N64
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -relocation-model=pic | FileCheck %s \
 ; RUN:    --check-prefixes=ALL,GP64,N64
-; RUN: llc < %s -march=mips64 -mcpu=mips3 -target-abi n32 -relocation-model=pic | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips3 -mabi=n32 -relocation-model=pic | FileCheck %s \
 ; RUN:    --check-prefixes=ALL,GP64,N32
-; RUN: llc < %s -march=mips64 -mcpu=mips64 -target-abi n32 -relocation-model=pic | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips64 -mabi=n32 -relocation-model=pic | FileCheck %s \
 ; RUN:    --check-prefixes=ALL,GP64,N32
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -target-abi n32 -relocation-model=pic | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -mabi=n32 -relocation-model=pic | FileCheck %s \
 ; RUN:    --check-prefixes=ALL,GP64,N32
 
 ; Check dynamic stack realignment in functions without variable-sized objects.

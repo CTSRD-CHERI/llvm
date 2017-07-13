@@ -2,7 +2,7 @@
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-O32,O32 %s
 ; RUN: llc -mtriple=mipsel-linux-android < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-O32,O32 %s
-; RUN: llc -mtriple=mips64el-linux-gnu -target-abi=n32 < %s -asm-verbose -relocation-model=pic | \
+; RUN: llc -mtriple=mips64el-linux-gnu -mabi=n32 < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-N32,N32 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,LINUX,LINUX-N64,N64 %s

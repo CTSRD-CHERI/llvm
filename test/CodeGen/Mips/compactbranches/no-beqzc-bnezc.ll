@@ -1,8 +1,8 @@
 ; RUN: llc -march=mipsel -mcpu=mips32r6 -disable-mips-delay-filler < %s | FileCheck %s
 ; RUN: llc -march=mips -mcpu=mips32r6 -disable-mips-delay-filler < %s -filetype=obj \
 ; RUN:     -o - | llvm-objdump -d - | FileCheck %s -check-prefix=ENCODING
-; RUN: llc -march=mipsel -mcpu=mips64r6 -disable-mips-delay-filler -target-abi=n64 < %s | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips64r6 -disable-mips-delay-filler -target-abi=n64 < %s -filetype=obj \
+; RUN: llc -march=mipsel -mcpu=mips64r6 -disable-mips-delay-filler -mabi=n64 < %s | FileCheck %s
+; RUN: llc -march=mips -mcpu=mips64r6 -disable-mips-delay-filler -mabi=n64 < %s -filetype=obj \
 ; RUN:     -o - | llvm-objdump -d - | FileCheck %s -check-prefix=ENCODING
 
 ; bnezc and beqzc have restriction that $rt != 0
@@ -103,7 +103,7 @@ define i64 @f5(i64 %a, i64 %b) {
 
 define i32 @f6(i32 %a) {
 ; CHECK-LABEL: f6:
-; CHECK: beqzc ${{[0-9]+}}, $BB
+; CHECK: beqzc ${{[0-9]+}},
 
   %cmp = icmp eq i32 %a, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -117,7 +117,7 @@ define i32 @f6(i32 %a) {
 
 define i32 @f7(i32 %a) {
 ; CHECK-LABEL: f7:
-; CHECK: bnezc ${{[0-9]+}}, $BB
+; CHECK: bnezc ${{[0-9]+}},
 
   %cmp = icmp eq i32 0, %a
   br i1 %cmp, label %if.then, label %if.end

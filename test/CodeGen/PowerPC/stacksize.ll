@@ -3,12 +3,12 @@
 ; For ELFv1 ABI, we always need to allocate the parameter area.
 
 ; Tests for ELFv2 ABI
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -target-abi elfv2 < %s | FileCheck %s -check-prefix=PPC64-ELFV2
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -target-abi elfv2 < %s | FileCheck %s -check-prefix=PPC64-ELFV2
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mabi=elfv2 < %s | FileCheck %s -check-prefix=PPC64-ELFV2
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mabi=elfv2 < %s | FileCheck %s -check-prefix=PPC64-ELFV2
 
 ; Tests for ELFv1 ABI
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -target-abi elfv1 < %s | FileCheck %s -check-prefix=PPC64-ELFV1
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -target-abi elfv1 < %s | FileCheck %s -check-prefix=PPC64-ELFV1
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mabi=elfv1 < %s | FileCheck %s -check-prefix=PPC64-ELFV1
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mabi=elfv1 < %s | FileCheck %s -check-prefix=PPC64-ELFV1
 
 ; If the callee has at most eight integer args, parameter area can be ommited for ELFv2 ABI.
 

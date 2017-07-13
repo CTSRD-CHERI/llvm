@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=aarch64-linux-gnu -filetype=obj -o - %s| llvm-readobj -r - | FileCheck %s
-// RUN: llvm-mc -target-abi=ilp32 -triple=aarch64-linux-gnu -filetype=obj \
+// RUN: llvm-mc -mabi=ilp32 -triple=aarch64-linux-gnu -filetype=obj \
 // RUN: -o - %s| llvm-readobj -r - | FileCheck -check-prefix=CHECK-ILP32 %s
         .text
 // These should produce an ADRP/ADD pair to calculate the address of
