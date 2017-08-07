@@ -1,8 +1,8 @@
 ; This test caused assertion failures in MIPS DAG->DAG Pattern Instruction Selection
 ; REQUIRES: asserts
 ; XFAIL: *
-; RUN: %cheri128_llc -target-abi purecap %s -o - | FileCheck %s
-; RUN: %cheri256_llc -target-abi purecap %s -o - | FileCheck %s
+; RUN: %cheri128_llc -mabi=purecap %s -o - | FileCheck %s
+; RUN: %cheri256_llc -mabi=purecap %s -o - | FileCheck %s
 ; ModuleID = '/local/scratch/alr48/cheri/llvm/tools/clang/test/CodeGen/cheri-byval-varargs.c'
 source_filename = "/local/scratch/alr48/cheri/llvm/tools/clang/test/CodeGen/cheri-byval-varargs.c"
 target datalayout = "E-m:e-pf200:128:128-i8:8:32-i16:16:32-i64:64-n32:64-S128-A200"

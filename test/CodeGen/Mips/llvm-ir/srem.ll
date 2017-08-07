@@ -30,7 +30,7 @@
 ; RUN:    -check-prefixes=ALL,MMR3,MM32
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM32
-; RUN: llc < %s -march=mips -mcpu=mips64r6 -target-abi n64 -mattr=+micromips -relocation-model=pic | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips64r6 -mabi=n64 -mattr=+micromips -relocation-model=pic | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM64
 
 define signext i1 @srem_i1(i1 signext %a, i1 signext %b) {

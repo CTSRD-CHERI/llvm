@@ -1,7 +1,7 @@
 ; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,O32 %s
 ; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,O32 %s
-; RUN: llc -march=mips64 -target-abi=n32 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N32 %s
-; RUN: llc -march=mips64el -target-abi=n32 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64 -mabi=n32 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64el -mabi=n32 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N32 %s
 ; RUN: llc -march=mips64 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N64 %s
 ; RUN: llc -march=mips64el -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N64 %s
 

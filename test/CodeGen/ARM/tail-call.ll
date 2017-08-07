@@ -1,8 +1,8 @@
-; RUN: llc -mtriple armv7 -target-abi apcs -O0 -o - < %s \
+; RUN: llc -mtriple armv7 -mabi=apcs -O0 -o - < %s \
 ; RUN:   | FileCheck %s -check-prefix CHECK-TAIL -check-prefix CHECK
-; RUN: llc -mtriple armv7 -target-abi apcs -O0 -disable-tail-calls -o - < %s \
+; RUN: llc -mtriple armv7 -mabi=apcs -O0 -disable-tail-calls -o - < %s \
 ; RUN:   | FileCheck %s -check-prefix CHECK-NO-TAIL -check-prefix CHECK
-; RUN: llc -mtriple armv7 -target-abi aapcs -O0 -o - < %s \
+; RUN: llc -mtriple armv7 -mabi=aapcs -O0 -o - < %s \
 ; RUN:   | FileCheck %s -check-prefix CHECK-TAIL-AAPCS -check-prefix CHECK
 
 declare i32 @callee(i32 %i)

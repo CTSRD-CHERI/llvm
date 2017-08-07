@@ -1,5 +1,5 @@
 ; RUN: llc -march=mips < %s | FileCheck %s -check-prefix=O32
-; RUN: llc -march=mips64 -target-abi=n32 < %s | FileCheck %s -check-prefix=N32
+; RUN: llc -march=mips64 -mabi=n32 < %s | FileCheck %s -check-prefix=N32
 ; RUN: llc -march=mips64 < %s | FileCheck %s -check-prefix=N64
 
 ; We only use the '$' prefix on O32. The others use the ELF convention.

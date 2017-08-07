@@ -1,8 +1,8 @@
-; RUN: llc  < %s -march=mips64el -mcpu=mips4 -target-abi=n64 | \
+; RUN: llc  < %s -march=mips64el -mcpu=mips4 -mabi=n64 | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,64
-; RUN: llc  < %s -march=mips64el -mcpu=mips64 -target-abi=n64 | \
+; RUN: llc  < %s -march=mips64el -mcpu=mips64 -mabi=n64 | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,64
-; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 -target-abi=n64 | \
+; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 -mabi=n64 | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,64R2
 
 declare double @copysign(double, double) nounwind readnone

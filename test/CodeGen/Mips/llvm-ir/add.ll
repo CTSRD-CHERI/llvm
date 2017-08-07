@@ -28,7 +28,7 @@
 ; RUN:    -check-prefixes=ALL,MMR6,MM32
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -O2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM32
-; RUN: llc < %s -march=mips -mcpu=mips64r6 -target-abi n64 -mattr=+micromips -O2 | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips64r6 -mabi=n64 -mattr=+micromips -O2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM64
 
 

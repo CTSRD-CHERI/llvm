@@ -1,8 +1,8 @@
 # RUN: not llvm-mc %s -arch=mips -mcpu=mips32r2 2>%t1
 # RUN: FileCheck %s < %t1 --check-prefix=O32
-# RUN: not llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 2>&1 | \
+# RUN: not llvm-mc %s -arch=mips64 -mcpu=mips64 -mabi=n32 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=N32
-# RUN: not llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 2>&1 | \
+# RUN: not llvm-mc %s -arch=mips64 -mcpu=mips64 -mabi=n64 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=N64
 
   .text

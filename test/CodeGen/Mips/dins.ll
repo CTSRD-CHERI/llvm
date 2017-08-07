@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=mips64 -mcpu=mips64r2 -target-abi=n64 < %s -o - | FileCheck %s -check-prefix=MIPS64R2
+; RUN: llc -O2 -march=mips64 -mcpu=mips64r2 -mabi=n64 < %s -o - | FileCheck %s -check-prefix=MIPS64R2
 ; RUN: llc -O2 -march=mips -mcpu=mips32r2 < %s -o - | FileCheck %s -check-prefix=MIPS32R2
 ; RUN: llc -O2 -march=mips -mattr=mips16 < %s -o - | FileCheck %s -check-prefix=MIPS16
 

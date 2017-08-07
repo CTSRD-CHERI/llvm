@@ -13,7 +13,7 @@
 # RUN:   llvm-readobj -sections -section-data -section-relocations -mips-abi-flags - | \
 # RUN:   FileCheck %s -check-prefixes=CHECK-OBJ,CHECK-OBJ-32R6,CHECK-OBJ-MIPS
 
-# RUN: llvm-mc /dev/null -arch=mips -mcpu=octeon -target-abi n64 -filetype=obj -o - | \
+# RUN: llvm-mc /dev/null -arch=mips -mcpu=octeon -mabi=n64 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations -mips-abi-flags - | \
 # RUN:   FileCheck %s -check-prefixes=CHECK-OBJ,CHECK-OBJ-64R2,CHECK-OBJ-OCTEON
 

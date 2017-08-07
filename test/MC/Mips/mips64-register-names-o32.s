@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -triple=mips64-unknown-freebsd -show-encoding \
-# RUN:     -target-abi o32 | FileCheck %s
+# RUN:     -mabi=o32 | FileCheck %s
 
 # Check that the register names are mapped to their correct numbers for o32
 # Second byte of addiu with $zero at rt contains the number of the source

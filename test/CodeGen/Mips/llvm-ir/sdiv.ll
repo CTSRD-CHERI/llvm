@@ -30,7 +30,7 @@
 ; RUN:    -check-prefixes=ALL,MMR3,MM32
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM32
-; RUN: llc < %s -march=mips -mcpu=mips64r6 -mattr=+micromips -target-abi n64 -relocation-model=pic | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips64r6 -mattr=+micromips -mabi=n64 -relocation-model=pic | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM64
 
 define signext i1 @sdiv_i1(i1 signext %a, i1 signext %b) {

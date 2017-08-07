@@ -124,6 +124,12 @@ MCPU("mcpu",
      cl::value_desc("cpu-name"),
      cl::init(""));
 
+static cl::opt<std::string>
+MABI("mabi",
+     cl::desc("Target ABI to assemble for"),
+     cl::value_desc("abi"),
+     cl::init(""));
+
 static cl::list<std::string>
 MAttrs("mattr",
   cl::CommaSeparated,
@@ -455,7 +461,6 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
-  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   TripleName = Triple::normalize(TripleName);
   setDwarfDebugFlags(argc, argv);
 
@@ -465,6 +470,10 @@ int main(int argc, char **argv) {
   const Target *TheTarget = GetTarget(ProgName);
   if (!TheTarget)
     return 1;
+
+  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  MCOptions.ABIName = MABI;
+
   // Now that GetTarget() has (potentially) replaced TripleName, it's safe to
   // construct the Triple object.
   Triple TheTriple(TripleName);

@@ -94,6 +94,8 @@ static cl::opt<std::string> SplitDwarfFile(
     "split-dwarf-file",
     cl::desc(
         "Specify the name of the .dwo file to encode in the DWARF output"));
+static cl::opt<std::string> MABI("mabi", cl::desc("Target ABI to assemble for"),
+                                 cl::value_desc("abi"), cl::init(""));
 
 static cl::opt<bool> NoVerify("disable-verify", cl::Hidden,
                               cl::desc("Do not verify input module"));
@@ -456,6 +458,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   Options.MCOptions.PreserveAsmComments = PreserveComments;
   Options.MCOptions.IASSearchPaths = IncludeDirs;
   Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
+  Options.MCOptions.ABIName = MABI;
 
   std::unique_ptr<TargetMachine> Target(
       TheTarget->createTargetMachine(TheTriple.getTriple(), CPUStr, FeaturesStr,
