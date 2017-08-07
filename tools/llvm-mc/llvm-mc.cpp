@@ -471,8 +471,16 @@ int main(int argc, char **argv) {
   if (!TheTarget)
     return 1;
 
+  // Adjust the triple if we can. Otherwise put the ABI name in
+  // MCTargetOptions::ABIName.
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
-  MCOptions.ABIName = MABI;
+  Triple TT;
+  std::tie(TT, MCOptions.ABIName) = Triple(TripleName).getABIVariant(MABI);
+  if (TT.getArch() == Triple::UnknownArch) {
+    errs() << ProgName << ": error: invalid -mabi value\n";
+    return 1;
+  }
+  TripleName = TT.str();
 
   // Now that GetTarget() has (potentially) replaced TripleName, it's safe to
   // construct the Triple object.

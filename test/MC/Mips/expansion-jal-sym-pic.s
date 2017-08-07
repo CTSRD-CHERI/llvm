@@ -200,8 +200,8 @@ local_label:
 # ELF-O32-NEXT: 27 39 00 58 	addiu	$25, $25, 88
 # ELF-O32-NEXT:                 R_MIPS_LO16 .text
 
-# N32: lw  $25, %got_disp($tmp0)($gp) # encoding: [0x8f,0x99,A,A]
-# N32:                                #   fixup A - offset: 0, value: %got_disp($tmp0), kind:   fixup_Mips_GOT_DISP
+# N32: lw  $25, %got_disp(.Ltmp0)($gp) # encoding: [0x8f,0x99,A,A]
+# N32:                                 #   fixup A - offset: 0, value: %got_disp(.Ltmp0), kind:   fixup_Mips_GOT_DISP
 
 # ELF-N32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-N32-NEXT:                 R_MIPS_GOT_DISP/R_MIPS_NONE/R_MIPS_NONE .Ltmp0

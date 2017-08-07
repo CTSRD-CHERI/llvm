@@ -1,5 +1,5 @@
 # These *MUST* match the output of gas compiled with the same triple and
-# corresponding options (-mabi=64 -> -mattr=+n64 for example).
+# corresponding options.
 
 # RUN: llvm-mc -filetype=obj -triple=mips64el-linux -mabi=n64 %s -o - \
 # RUN: | llvm-readobj -s | FileCheck --check-prefix=CHECK_64 %s

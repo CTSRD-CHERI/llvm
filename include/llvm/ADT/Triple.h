@@ -202,7 +202,15 @@ public:
     AMDOpenCL,
     CoreCLR,
     OpenCL,
-    LastEnvironmentType = OpenCL
+    AndroidABI32,
+    AndroidABI64,
+    ABI32,
+    ABIN32,
+    ABI64,
+    GNUABI32,
+    GNUABIN32,
+    Purecap,
+    LastEnvironmentType = Purecap
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
@@ -497,7 +505,8 @@ public:
 
   bool isGNUEnvironment() const {
     EnvironmentType Env = getEnvironment();
-    return Env == Triple::GNU || Env == Triple::GNUABI64 ||
+    return Env == Triple::GNU || Env == Triple::GNUABI32 ||
+           Env == Triple::GNUABIN32 || Env == Triple::GNUABI64 ||
            Env == Triple::GNUEABI || Env == Triple::GNUEABIHF ||
            Env == Triple::GNUX32;
   }
@@ -605,7 +614,11 @@ public:
   }
 
   /// Tests whether the target is Android
-  bool isAndroid() const { return getEnvironment() == Triple::Android; }
+  bool isAndroid() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == Triple::Android || Env == Triple::AndroidABI32 ||
+           Env == Triple::AndroidABI64;
+  }
 
   bool isAndroidVersionLT(unsigned Major) const {
     assert(isAndroid() && "Not an Android triple!");
@@ -716,6 +729,22 @@ public:
   /// \returns A new triple with a little endian architecture or an unknown
   ///          architecture if no such variant can be found.
   llvm::Triple getLittleEndianArchVariant() const;
+
+  /// Form a triple with variant of the current architecture and the specified
+  /// ABI.
+  ///
+  /// Generally speaking the target specifies the ABI in the triple if the ABI
+  /// has a large effect on the output (e.g. ELFCLASS32/ELFCLASS64, REL/RELA,
+  /// different sets of relocs) and/or is not link-compatible with other ABI's.
+  /// If the ABI is fairly small in effect (e.g. calling convention) then and/or
+  /// is link-compatible with other ABI's then MCTargetOptions is preferable.
+  ///
+  /// \param ABI The ABI name to use. If it is an empty string then the triple's
+  /// default is used.
+  /// \returns A new triple with the requested ABI or an unknown architecture
+  ///          if no such variant can be found. Also, an ABI name that is
+  ///          consistent with the triple.
+  std::pair<llvm::Triple, StringRef> getABIVariant(StringRef ABI) const;
 
   /// Get the (LLVM) name of the minimum ARM CPU for the arch we are targeting.
   ///

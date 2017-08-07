@@ -67,6 +67,19 @@ MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef CPU,
     return MipsABIInfo::N64();
   if (ABIName.startswith("sandbox") || ABIName.startswith("purecap"))
     return MipsABIInfo::CheriPureCap();
+  if (TT.getEnvironment() == Triple::ABI32 ||
+      TT.getEnvironment() == Triple::AndroidABI32 ||
+      TT.getEnvironment() == Triple::GNUABI32)
+    return MipsABIInfo::O32();
+  if (TT.getEnvironment() == Triple::ABIN32 ||
+      TT.getEnvironment() == Triple::GNUABIN32)
+    return MipsABIInfo::N32();
+  if (TT.getEnvironment() == Triple::ABI64 ||
+      TT.getEnvironment() == Triple::AndroidABI64 ||
+      TT.getEnvironment() == Triple::GNUABI64)
+    return MipsABIInfo::N64();
+  if (TT.getEnvironment() == Triple::Purecap)
+    return MipsABIInfo::CheriPureCap();
   assert(ABIName.empty() && "Unknown ABI option for MIPS");
 
   if (TT.getArch() == Triple::mips64 || TT.getArch() == Triple::mips64el ||

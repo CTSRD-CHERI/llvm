@@ -54,7 +54,8 @@ li.s	$f4, 0.0
 
 li.s	$f4, 1.12345
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:\.Ltmp[0-9]+]]:
 # ALL:	.4byte	1066388790
 # ALL:	.text
 # O32-N32-PIC:     lw      $1, %got([[LABEL]])($gp)   # encoding: [A,A,0x81,0x8f]
@@ -84,7 +85,8 @@ li.s	$f4, 1.0
 
 li.s	$f4, 12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1345844999
 # ALL:	.text
 # O32-N32-PIC:     lw      $1, %got([[LABEL]])($gp)   # encoding: [A,A,0x81,0x8f]
@@ -106,7 +108,8 @@ li.s	$f4, 12345678910
 
 li.s	$f4, 12345678910.0
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1345844999
 # ALL:	.text
 # O32-N32-PIC:     lw      $1, %got([[LABEL]])($gp)   # encoding: [A,A,0x81,0x8f]
@@ -129,7 +132,8 @@ li.s	$f4, 12345678910.0
 
 li.s	$f4, 0.4
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1053609165
 # ALL:	.text
 # O32-N32-PIC:     lw      $1, %got([[LABEL]])($gp)   # encoding: [A,A,0x81,0x8f]
@@ -155,7 +159,8 @@ li.s	$f4, 1.5
 
 li.s	$f4, 12345678910.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1345844999
 # ALL:	.text
 # O32-N32-PIC:     lw      $1, %got([[LABEL]])($gp)   # encoding: [A,A,0x81,0x8f]
@@ -177,7 +182,8 @@ li.s	$f4, 12345678910.12345678910
 
 li.s	$f4, 12345678910123456789.12345678910
 # ALL:	.section	.rodata,"a",@progbits
-# ALL:  [[LABEL:\$tmp[0-9]+]]:
+# O32:  [[LABEL:\$tmp[0-9]+]]:
+# N32-N64:  [[LABEL:.Ltmp[0-9]+]]:
 # ALL:	.4byte	1596675242
 # ALL:	.text
 # O32-N32-PIC:     lw      $1, %got([[LABEL]])($gp)   # encoding: [A,A,0x81,0x8f]

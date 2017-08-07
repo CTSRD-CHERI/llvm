@@ -458,7 +458,16 @@ static int compileModule(char **argv, LLVMContext &Context) {
   Options.MCOptions.PreserveAsmComments = PreserveComments;
   Options.MCOptions.IASSearchPaths = IncludeDirs;
   Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
-  Options.MCOptions.ABIName = MABI;
+  //
+  // Adjust the triple if we can. Otherwise put the ABI name in
+  // MCTargetOptions::ABIName.
+  std::tie(TheTriple, Options.MCOptions.ABIName) =
+      TheTriple.getABIVariant(MABI);
+
+  if (TheTriple.getArch() == Triple::UnknownArch) {
+    errs() << argv[0] << ": error: invalid -mabi value.\n";
+    return 1;
+  }
 
   std::unique_ptr<TargetMachine> Target(
       TheTarget->createTargetMachine(TheTriple.getTriple(), CPUStr, FeaturesStr,
