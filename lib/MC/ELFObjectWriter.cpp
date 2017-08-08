@@ -1126,6 +1126,27 @@ void ELFObjectWriter::writeRelocations(const MCAssembler &Asm,
 
       if (hasRelocationAddend())
         write(uint32_t(Entry.Addend));
+
+      uint32_t tempType = TargetObjectWriter->getRType2(Entry.Type);
+      if(tempType) {
+        write(uint32_t(Entry.Offset));
+
+        ERE32.setSymbolAndType(0, tempType);
+        write(ERE32.r_info);
+
+        if (hasRelocationAddend())
+          write(uint32_t(Entry.Addend));
+      }
+      tempType = TargetObjectWriter->getRType3(Entry.Type);
+      if(tempType) {
+        write(uint32_t(Entry.Offset));
+
+        ERE32.setSymbolAndType(0, tempType);
+        write(ERE32.r_info);
+
+        if (hasRelocationAddend())
+          write(uint32_t(Entry.Addend));
+      }
     }
   }
 }
