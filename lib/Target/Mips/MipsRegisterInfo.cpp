@@ -177,7 +177,7 @@ getReservedRegs(const MachineFunction &MF) const {
   };
 
   static const uint16_t ReservedCheriRegs[] = {
-    Mips::C0, Mips::C25, Mips::C26, Mips::C27, Mips::C28, Mips::C29, Mips::C30,
+    Mips::C0, Mips::C26, Mips::C27, Mips::C28, Mips::C29, Mips::C30,
     Mips::C31
   };
 
