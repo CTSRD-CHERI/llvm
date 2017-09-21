@@ -3470,6 +3470,8 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   SDValue AllocSize = getValue(I.getArraySize());
 
   EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout());
+  EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout(),
+      I.getType()->getPointerAddressSpace());
   if (AllocSize.getValueType() != IntPtr)
     AllocSize = DAG.getZExtOrTrunc(AllocSize, dl, IntPtr);
 
@@ -3501,7 +3503,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
                                                 dl));
 
   SDValue Ops[] = { getRoot(), AllocSize, DAG.getIntPtrConstant(Align, dl) };
-  SDVTList VTs = DAG.getVTList(AllocSize.getValueType(), MVT::Other);
+  SDVTList VTs = DAG.getVTList(PtrTy, MVT::Other);
   SDValue DSA = DAG.getNode(ISD::DYNAMIC_STACKALLOC, dl, VTs, Ops);
   setValue(&I, DSA);
   DAG.setRoot(DSA.getValue(1));
@@ -5579,9 +5581,10 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   }
   case Intrinsic::stacksave: {
     SDValue Op = getRoot();
+    unsigned AS = I.getType()->getPointerAddressSpace();
     Res = DAG.getNode(
         ISD::STACKSAVE, sdl,
-        DAG.getVTList(TLI.getPointerTy(DAG.getDataLayout()), MVT::Other), Op);
+        DAG.getVTList(TLI.getPointerTy(DAG.getDataLayout(), AS), MVT::Other), Op);
     setValue(&I, Res);
     DAG.setRoot(Res.getValue(1));
     return nullptr;

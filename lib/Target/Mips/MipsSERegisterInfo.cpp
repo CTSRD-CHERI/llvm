@@ -234,9 +234,26 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   //   incoming argument, callee-saved register location or local variable.
   bool IsKill = false;
   int64_t Offset;
+  int RegOpNo = OpNo;
+  int ImmOpNo = OpNo + 1;
+  if (ABI.IsCheriPureCap()) {
+    RegOpNo = OpNo;
+    if ((MI.getOpcode() == Mips::CAPSTORE64) ||
+        (MI.getOpcode() == Mips::CAPSTORE32) ||
+        (MI.getOpcode() == Mips::STORECAP) ||
+        (MI.getOpcode() == Mips::CAPLOAD64) ||
+        (MI.getOpcode() == Mips::CAPLOAD32) ||
+        (MI.getOpcode() == Mips::LOADCAP)) {
+      ImmOpNo = 2;
+      RegOpNo = 3;
+    } else
+      assert(MI.getOpcode() == Mips::CIncOffset);
+  }
+
 
   Offset = SPOffset + (int64_t)StackSize;
-  Offset += MI.getOperand(OpNo + 1).getImm();
+  if (MI.getOperand(ImmOpNo).isImm())
+    Offset += MI.getOperand(ImmOpNo).getImm();
 
   DEBUG(errs() << "Offset     : " << Offset << "\n" << "<--------->\n");
 
@@ -251,22 +268,50 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
     auto *STI = TM.getSubtargetImpl(*MF.getFunction());
     const MipsSEInstrInfo &TII = *static_cast<const MipsSEInstrInfo *>(
           STI->getInstrInfo());
-    if (STI->isCheri() && RS && RS->isScavengingFrameIndex(FrameIndex)) {
-      assert(isInt<16>(Offset) &&
-          "Emergency spill slot must be within 32K of the frame pointer!");
+    if (MI.getOpcode() == Mips::CIncOffset) {
+      assert(isInt<16>(Offset));
       MachineBasicBlock &MBB = *MI.getParent();
-      DebugLoc DL = II->getDebugLoc();
-      bool isN64 = static_cast<const MipsTargetMachine&>(
-          MF.getTarget()).getABI().IsN64();
-      unsigned ADDiu = isN64 ? Mips::DADDiu : Mips::ADDiu;
-      // Add the offset to the frame register
-      BuildMI(MBB, II, DL, TII.get(ADDiu), FrameReg)
-        .addReg(FrameReg).addImm(Offset);
-      // Subtract again after the load to reset it
-      if (MI.getOperand(0).getReg() != FrameReg)
-        BuildMI(MBB, (++II), DL, TII.get(ADDiu), FrameReg)
-          .addReg(FrameReg).addImm(-Offset);
-      Offset = 0;
+      unsigned Reg = Offset == 0 ? Mips::ZERO_64 :
+        TII.loadImmediate(Offset, MBB, II, II->getDebugLoc(), nullptr);
+      MI.getOperand(1).ChangeToRegister(FrameReg, false);
+      MI.getOperand(2).ChangeToRegister(Reg, false, false, true);
+      return;
+    }
+
+    if (ABI.IsCheriPureCap()) {
+      if (!isIntN(OffsetBitSize, Offset)) {
+        assert(isInt<16>(Offset) &&
+            "Emergency spill slot must be within 32K of the frame pointer!");
+        MachineBasicBlock &MBB = *MI.getParent();
+        DebugLoc DL = II->getDebugLoc();
+        // If we have an offset that needs to fit into a signed n-bit immediate
+        // (where n < 16) and doesn't, but does fit into 16-bits then use an ADDiu
+        bool isFrameReg = MI.getOperand(0).getReg() == FrameReg;
+        bool needsIncOffset = MI.getOperand(1).getReg() != Mips::ZERO_64;
+        const TargetRegisterClass *PtrRC =
+            ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
+        MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
+        unsigned Reg = RegInfo.createVirtualRegister(PtrRC);
+        BuildMI(MBB, II, DL, TII.get(ABI.GetPtrAddiuOp()), Reg)
+            .addReg(Mips::ZERO_64)
+            .addImm(Offset);
+        if (needsIncOffset) {
+          BuildMI(MBB, II, DL, TII.get(Mips::CIncOffset), FrameReg)
+              .addReg(FrameReg)
+              .addReg(Reg, isFrameReg ? RegState::Kill : 0);
+          if (!isFrameReg) {
+            unsigned NegReg = RegInfo.createVirtualRegister(PtrRC);
+            BuildMI(MBB, (++II), DL, TII.get(Mips::DSUBu), NegReg)
+              .addReg(Mips::ZERO_64)
+              .addReg(Reg, RegState::Kill);
+            BuildMI(MBB, II, DL, TII.get(Mips::CIncOffset), FrameReg)
+              .addReg(FrameReg)
+              .addReg(NegReg, RegState::Kill);
+          }
+        } else
+          MI.getOperand(1).ChangeToRegister(Reg, false, false, true);
+        Offset = 0;
+      }
     } else if (OffsetBitSize < 16 && isInt<16>(Offset) &&
         (!isIntN(OffsetBitSize, Offset) ||
          OffsetToAlignment(Offset, OffsetAlign) != 0)) {
@@ -302,6 +347,6 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
     }
   }
 
-  MI.getOperand(OpNo).ChangeToRegister(FrameReg, false, false, IsKill);
-  MI.getOperand(OpNo + 1).ChangeToImmediate(Offset);
+  MI.getOperand(RegOpNo).ChangeToRegister(FrameReg, false, false, IsKill);
+  MI.getOperand(ImmOpNo).ChangeToImmediate(Offset);
 }
