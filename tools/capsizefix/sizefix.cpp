@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
   }
 
   for (const SymbolRef &sym : OF->getBinary()->symbols()) {
-    uint64_t Size = ELFSymbolRef(sym).getSize();
+    uint32_t Size = ELFSymbolRef(sym).getSize();
     if (Size == 0)
       continue;
     Expected<StringRef> Name = sym.getName();
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
       } else
         SizeForName[*Name] = Size;
     }
-    Expected<uint64_t> Start = sym.getAddress();
+    Expected<uint32_t> Start = sym.getAddress();
     if (!Start)
       continue;
     Expected<SymbolRef::Type> SymbolType = sym.getType();
@@ -79,18 +79,18 @@ int main(int argc, char *argv[]) {
       SymbolSizes.insert({Start.get(), {Size, (type == SymbolRef::ST_Function)}});
     }
   }
-  const size_t entry_size = 40;
+  const size_t entry_size = 20;
   MemoryBufferRef MB = OF->getBinary()->getMemoryBufferRef();
   for (int i = 0, e = Data.size() / entry_size; i < e; i++) {
     const char *entry = Data.data() + (entry_size * i);
-    uint64_t base = support::endian::read<uint64_t, support::big, 1>(entry + 8);
+    uint32_t base = support::endian::read<uint32_t, support::big, 1>(entry + 4);
     if (!((entry >= MB.getBufferStart()) && (entry <= MB.getBufferEnd()))) {
       fprintf(stderr,
               "Unexpected location for capability relocations section!\n");
       return EXIT_FAILURE;
     }
     auto SizeAndType = SymbolSizes.find(base);
-    uint64_t Size = 0;
+    uint32_t Size = 0;
     bool isFunction = false;
     if (base == 0)
       Size = -1;
@@ -124,33 +124,33 @@ int main(int argc, char *argv[]) {
       Size = SizeAndType->second.first;
       isFunction = SizeAndType->second.second;
     }
-    uint64_t Perms = 0;
+    uint32_t Perms = 0;
     if (isFunction)
-        Perms |= (1ULL<<63);
-    uint64_t BigSize =
-        support::endian::byte_swap<uint64_t, support::big>(Size);
-    uint64_t BigPerms =
-        support::endian::byte_swap<uint64_t, support::big>(Perms);
+        Perms |= (1U<<31);
+    uint32_t BigSize =
+        support::endian::byte_swap<uint32_t, support::big>(Size);
+    uint32_t BigPerms =
+        support::endian::byte_swap<uint32_t, support::big>(Perms);
     // This is an ugly hack.  object ought to allow modification
-    fseek(F, entry - MB.getBufferStart() + 24, SEEK_SET);
+    fseek(F, entry - MB.getBufferStart() + 12, SEEK_SET);
     fwrite(&BigSize, sizeof(BigSize), 1, F);
     fwrite(&BigPerms, sizeof(BigPerms), 1, F);
   }
   if (SizesSection != SectionRef()) {
     SizesSection.getContents(Data);
-    uint64_t SectionOffset = Data.data() - MB.getBufferStart();
+    uint32_t SectionOffset = Data.data() - MB.getBufferStart();
     for (SymbolRef &sym : SizeSymbols) {
-      Expected<uint64_t> Start = sym.getAddress();
+      Expected<uint32_t> Start = sym.getAddress();
       if (!Start)
         continue;
-      uint64_t offset = *Start - SizesSection.getAddress();
+      uint32_t offset = *Start - SizesSection.getAddress();
       Expected<StringRef> SymName = sym.getName();
       if (!SymName)
         continue;
       std::string Name = SymName->str();
       Name = Name.substr(SizePrefix.size(), Name.length() - SizePrefix.size());
       auto SizeIt = SizeForName.find(Name);
-      uint64_t Size;
+      uint32_t Size;
       if (SizeIt == SizeForName.end()) {
         fprintf(stderr, "Unable to find size for symbol %s\n", Name.c_str());
         Size = 0;
@@ -162,8 +162,8 @@ int main(int argc, char *argv[]) {
       }
 #endif
       fseek(F, SectionOffset + offset, SEEK_SET);
-      uint64_t BigSize =
-          support::endian::byte_swap<uint64_t, support::big>(Size);
+      uint32_t BigSize =
+          support::endian::byte_swap<uint32_t, support::big>(Size);
       fwrite(&BigSize, sizeof(BigSize), 1, F);
     }
   }

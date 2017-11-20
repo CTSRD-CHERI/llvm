@@ -217,6 +217,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case ABI32: return "abi32";
   case ABIN32: return "abin32";
   case ABI64: return "abi64";
+  case Purecap32: return "purecap32";
+  case Purecap: return "purecap";
   case GNU: return "gnu";
   case GNUABI32: return "gnuabi32";
   case GNUABIN32: return "gnuabin32";
@@ -239,7 +241,6 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case AMDOpenCL: return "amdopencl";
   case CoreCLR: return "coreclr";
   case OpenCL: return "opencl";
-  case Purecap: return "purecap";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -506,6 +507,8 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
     .StartsWith("abi32", Triple::ABI32)
     .StartsWith("abin32", Triple::ABIN32)
     .StartsWith("abi64", Triple::ABI64)
+    .StartsWith("purecap32", Triple::Purecap32)
+    .StartsWith("purecap", Triple::Purecap)
     .StartsWith("eabihf", Triple::EABIHF)
     .StartsWith("eabi", Triple::EABI)
     .StartsWith("gnuabi32", Triple::GNUABI32)
@@ -528,7 +531,6 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
     .StartsWith("amdopencl", Triple::AMDOpenCL)
     .StartsWith("coreclr", Triple::CoreCLR)
     .StartsWith("opencl", Triple::OpenCL)
-    .StartsWith("purecap", Triple::Purecap)
     .Default(Triple::UnknownEnvironment);
 }
 
@@ -1557,9 +1559,19 @@ std::pair<llvm::Triple, StringRef> Triple::getABIVariant(StringRef ABI) const {
     return std::make_pair(T, ABI);
 
   case Triple::cheri:
+    EnvironmentType NewEnv;
     if (ABI == "" || ABI.startswith("sandbox") || ABI.startswith("purecap") ||
-        ABI.startswith("n64") || ABI.startswith("n32"))
+        ABI.startswith("n64") || ABI.startswith("n32")) {
+      NewEnv = StringSwitch<EnvironmentType>(ABI)
+                   .Case("purecap32", Triple::Purecap32)
+                   .Case("purecap", Triple::Purecap)
+                   .Case("n32", Triple::ABIN32)
+                   .Case("n64", Triple::ABI64)
+                   .Default(Triple::UnknownEnvironment);
+      if (NewEnv != T.getEnvironment())
+        T.setEnvironment(NewEnv);
       return std::make_pair(T, ABI);
+    }
     T.setArch(Triple::UnknownArch);
     return std::make_pair(T, ABI);
 
@@ -1567,8 +1579,6 @@ std::pair<llvm::Triple, StringRef> Triple::getABIVariant(StringRef ABI) const {
   case Triple::mipsel:
   case Triple::mips64:
   case Triple::mips64el: {
-    EnvironmentType NewEnv;
-
     if (ABI == "")
       ABI = (getArch() == Triple::mips || getArch() == Triple::mipsel) ? "o32" : "n64";
 

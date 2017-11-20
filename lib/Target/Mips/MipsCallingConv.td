@@ -21,6 +21,7 @@ class CCIfSubtarget<string F, CCAction A, string Invert = "">
 class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
 def CC_MipsCheriCapOnStack : CallingConv<[
+  CCIfSubtarget<"isCheri64()", CCAssignToStack<8, 8>>,
   CCIfSubtarget<"isCheri128()", CCAssignToStack<16, 16>>,
   CCIfSubtargetNot<"isCheri128()", CCAssignToStack<32, 32>>
 ]>;

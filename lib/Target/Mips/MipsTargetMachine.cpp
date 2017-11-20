@@ -76,7 +76,17 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   else
     Ret += "-m:e";
 
-  if (FS.find("+cheri128") != StringRef::npos) {
+  if (FS.find("+cheri64") != StringRef::npos) {
+#if !CHERI_IS_64
+    if (!UnsafeUsage) {
+      for (int i=0 ; i<10 ; i++) {
+        errs() << "Trying to compile CHERI64 code with a non-CHERI64 compiler!\n";
+      }
+      abort();
+    }
+#endif
+    Ret += "-pf200:64:64";
+  } else if (FS.find("+cheri128") != StringRef::npos) {
 #if !CHERI_IS_128
     if (!UnsafeUsage) {
       for (int i=0 ; i<10 ; i++) {

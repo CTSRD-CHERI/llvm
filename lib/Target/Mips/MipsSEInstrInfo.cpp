@@ -215,7 +215,7 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       // FIXME: This shouldn't be needed.  Whatever is allocating the frame index
       // ought to set it.
       MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
-      MFI.setObjectAlignment(FI, Subtarget.isCheri128() ? 16 : 32);
+      MFI.setObjectAlignment(FI, Subtarget.isCheri64()? 8 : (Subtarget.isCheri128() ? 16 : 32));
     } else {
       llvm_unreachable("Unexpected register type for CHERI!");
     }
@@ -259,7 +259,7 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     // FIXME: This shouldn't be needed.  Whatever is allocating the frame index
     // ought to set it.
     MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
-    MFI.setObjectAlignment(FI, Subtarget.isCheri128() ? 16 : 32);
+    MFI.setObjectAlignment(FI, Subtarget.isCheri64()? 8 : (Subtarget.isCheri128() ? 16 : 32));
     BuildMI(MBB, I, DL, get(Opc)).addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FI).addImm(Offset).addMemOperand(MMO)
       .addReg(Mips::C0);

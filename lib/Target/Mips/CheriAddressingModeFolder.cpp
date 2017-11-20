@@ -47,6 +47,8 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
     int64_t off;
     // If this is an add-immediate then we can possibly fold it
     switch (AddInst->getOpcode()) {
+    case Mips::ADDi:
+    case Mips::ADDiu:
     case Mips::DADDi:
     case Mips::DADDiu:
       // Don't try to fold in things that have relocations yet
@@ -59,7 +61,7 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
       return false;
     }
     // We potentially could fold non-zero adds, but we'll leave them for now.
-    if (reg != Mips::ZERO_64)
+    if (reg != Mips::ZERO_64 && reg != Mips::ZERO)
       return false;
     off += offset;
     // If the result is too big to fit in the offset field, give up
@@ -94,7 +96,7 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
         return isShiftedInt<8,3>(immediate);
       case Mips::LOADCAP:
       case Mips::STORECAP:
-        return isShiftedInt<11,4>(immediate);
+        return isShiftedInt<11,3>(immediate);
     }
   }
   unsigned MipsOpForCHERIOp(unsigned Op) {
@@ -158,7 +160,7 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
         // If the load is not currently at register-zero offset, we can't fix
         // it up to use relative addressing, but we may be able to modify it so
         // that it is...
-        if (I.getOperand(1).getReg() != Mips::ZERO_64) {
+        if (I.getOperand(1).getReg() != Mips::ZERO_64 && I.getOperand(1).getReg() != Mips::ZERO) {
           MachineInstr *AddInst;
           // If the register offset is a simple constant, then try to move it
           // into the memory operation
@@ -245,7 +247,7 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
       // If this was the result of a daddiu, fold the immediate into the result
       // as well.
       MachineInstr *AddInst = RI.getUniqueVRegDef(BaseReg);
-      if (AddInst && (AddInst->getOpcode() == Mips::DADDiu)) {
+      if (AddInst && (AddInst->getOpcode() == Mips::DADDiu || AddInst->getOpcode() == Mips::ADDiu)) {
         MachineOperand &MO = AddInst->getOperand(2);
         // FIXME: We could probably fold the add into the load in some cases
         // even when it's not initially zero, as our immediate field has just

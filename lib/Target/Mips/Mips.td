@@ -165,6 +165,9 @@ def FeatureMipsCheri   : SubtargetFeature<"cheri", "IsCheri", "true",
 def FeatureMipsCheri128 : SubtargetFeature<"cheri128", "IsCheri128", "true",
                                 "Capabilities are 128 bits",
                                 [FeatureMipsCheri]>;
+def FeatureMipsCheri64 : SubtargetFeature<"cheri64", "IsCheri64", "true",
+                                "Capabilities are 64 bits",
+                                [FeatureMipsCheri]>;
 def FeatureSym32       : SubtargetFeature<"sym32", "HasSym32", "true",
                                           "Symbols are 32 bit on Mips64">;
 
@@ -213,6 +216,8 @@ def : ProcessorModel<"cheri", BeriModel,
                      [FeatureMipsCheri, FeatureMips4]>;
 def : ProcessorModel<"cheri128", BeriModel,
                      [FeatureMipsCheri128, FeatureMipsCheri, FeatureMips4]>;
+def : ProcessorModel<"cheri64", BeriModel,
+                     [FeatureMipsCheri64, FeatureMipsCheri, FeatureMips4]>;
 def : Proc<"mips1", [FeatureMips1]>;
 def : Proc<"mips2", [FeatureMips2]>;
 def : Proc<"mips32", [FeatureMips32]>;

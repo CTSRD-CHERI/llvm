@@ -36,17 +36,17 @@ class CheriMemOpLowering : public FunctionPass,
   }
   Constant *getMemCpy_c() {
     if (!Memcpy_c)
-      Memcpy_c = M->getOrInsertFunction("memcpy_c", CapTy, CapTy, CapTy, Int64Ty);
+      Memcpy_c = M->getOrInsertFunction("memcpy_c", CapTy, CapTy, CapTy, Int32Ty);
     return Memcpy_c;
   }
   Constant *getMemMove_c() {
     if (!Memmove_c)
-      Memmove_c = M->getOrInsertFunction("memmove_c", CapTy, CapTy, CapTy, Int64Ty);
+      Memmove_c = M->getOrInsertFunction("memmove_c", CapTy, CapTy, CapTy, Int32Ty);
     return Memmove_c;
   }
   Constant *getMemSet_c() {
     if (!Memset_c)
-      Memset_c = M->getOrInsertFunction("memset_c", VoidTy, CapTy, Int32Ty, Int64Ty);
+      Memset_c = M->getOrInsertFunction("memset_c", VoidTy, CapTy, Int32Ty, Int32Ty);
     return Memset_c;
   }
 

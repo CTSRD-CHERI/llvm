@@ -126,10 +126,10 @@ void MCStreamer::EmitSLEB128IntValue(int64_t Value) {
 void MCStreamer::EmitValue(const MCExpr *Value, unsigned Size, SMLoc Loc) {
   // This is a massive hack, but it needs rewriting once we have proper linker
   // support.
-  if (Size > 8) {
+  if (Size > 4) {
     if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Value)) {
-      assert(Size == 32 || Size == 16);
-      EmitIntValue(0, 8);
+      assert(Size == 32 || Size == 16 || Size == 8);
+      if (Size == 16) EmitIntValue(0, 8);
       EmitIntValue(CE->getValue(), 8);
       if (Size == 32) {
           EmitIntValue(0, 8);
@@ -766,7 +766,7 @@ void MCStreamer::Finish() {
   if (!FatRelocs.empty()) {
     MCSection *DefaultRelocSection = Context.getELFSection("__cap_relocs",
         ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-    DefaultRelocSection->setAlignment(8);
+    DefaultRelocSection->setAlignment(4);
     for (auto &R : FatRelocs) {
       MCSymbol *Sym;
       const MCExpr *Value;
@@ -778,24 +778,24 @@ void MCStreamer::Finish() {
         RelocSection =
           Context.getELFSection("__cap_relocs", ELF::SHT_PROGBITS,
                                 ELF::SHF_ALLOC | ELF::SHF_GROUP, 0, GroupName);
-        RelocSection->setAlignment(8);
+        RelocSection->setAlignment(4);
       } else {
         RelocSection = DefaultRelocSection;
       }
 
       SwitchSection(RelocSection);
 
-      EmitValue(MCSymbolRefExpr::create(Sym, Context), 8);
+      EmitValue(MCSymbolRefExpr::create(Sym, Context), 4);
       if (const MCSymbolRefExpr *Sym = dyn_cast<MCSymbolRefExpr>(Value)) {
-        EmitValue(Sym, 8);
-        EmitZeros(8);
+        EmitValue(Sym, 4);
+        EmitZeros(4);
       } else {
         const MCBinaryExpr *Bin = cast<MCBinaryExpr>(Value);
-        EmitValue(cast<MCSymbolRefExpr>(Bin->getLHS()), 8);
-        EmitValue(Bin->getRHS(), 8);
+        EmitValue(cast<MCSymbolRefExpr>(Bin->getLHS()), 4);
+        EmitValue(Bin->getRHS(), 4);
       }
       // TODO: Emit size / perms here.
-      EmitZeros(16);
+      EmitZeros(8);
     }
   }
 

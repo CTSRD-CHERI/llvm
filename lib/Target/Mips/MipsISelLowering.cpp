@@ -297,7 +297,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::TRAP,               MVT::Other, Legal);
   if (Subtarget.isCheri()) {
     setOperationAction(ISD::ADDRSPACECAST,    MVT::iFATPTR, Custom);
-    setOperationAction(ISD::ADDRSPACECAST,    MVT::i64, Custom);
+    setOperationAction(ISD::ADDRSPACECAST,    MVT::i32, Custom);
   }
 
   // Mips Custom Operations
@@ -1406,8 +1406,8 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinary(bool isCapOp,
   if (isCapOp) {
     switch (Size) {
       case 8:
-        LL = Mips::CLLD;
-        SC = Mips::CSCD;
+        LL = Mips::CLLC;
+        SC = Mips::CSCC;
         break;
       case 4:
         LL = Mips::CLLW;
@@ -1982,7 +1982,7 @@ static SDValue setBounds(SelectionDAG &DAG, SDValue Val, SDValue Length) {
   SDLoc DL(Val);
   Intrinsic::ID SetBounds = Intrinsic::cheri_cap_bounds_set;
   return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::iFATPTR,
-        DAG.getConstant(SetBounds, DL, MVT::i64), Val,
+        DAG.getConstant(SetBounds, DL, MVT::i32), Val,
         Length);
 }
 
@@ -1995,7 +1995,7 @@ SDValue MipsTargetLowering::lowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG)
   SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
   EVT DstTy = Op.getValueType();
-  if (Src.getValueType() == MVT::i64) {
+  if (Src.getValueType() == MVT::i32) {
     assert(Op.getValueType() == MVT::iFATPTR);
     auto Ptr = DAG.getNode(ISD::INTTOPTR, DL, DstTy, Src);
     if (auto *N = dyn_cast<GlobalAddressSDNode>(Src)) {
@@ -2009,7 +2009,7 @@ SDValue MipsTargetLowering::lowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG)
     return Ptr;
   }
   assert(Src.getValueType() == MVT::iFATPTR);
-  assert(Op.getValueType() == MVT::i64);
+  assert(Op.getValueType() == MVT::i32);
   return DAG.getNode(ISD::PTRTOINT, DL, DstTy, Src);
 }
 
@@ -2073,7 +2073,7 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
 
   EVT AddrTy = Ty;
   if (GV->getType()->getAddressSpace() == 200)
-    Ty = MVT::i64;
+    Ty = MVT::i32;
   SDValue Global;
 
   if (!isPositionIndependent()) {
@@ -2137,16 +2137,16 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
         const Module &M = *GV->getParent();
         std::string Name = (Twine(".size.")+GV->getName()).str();
         GlobalVariable *SizeGV = M.getGlobalVariable(Name);
-        Type *I64 = Type::getInt64Ty(*DAG.getContext());
+        Type *I32 = Type::getInt32Ty(*DAG.getContext());
         if (!SizeGV) {
           SizeGV = new GlobalVariable(const_cast<Module&>(M),
-              I64, /*isConstant*/true,
-              GlobalValue::LinkOnceAnyLinkage, ConstantInt::get(I64, 0),
+              I32, /*isConstant*/true,
+              GlobalValue::LinkOnceAnyLinkage, ConstantInt::get(I32, 0),
               Twine(".size.")+GV->getName());
           SizeGV->setSection(".global_sizes");
         }
-        SDValue Size = DAG.getGlobalAddress(SizeGV, SDLoc(Global), MVT::i64);
-        Size = DAG.getLoad(MVT::i64, SDLoc(Global), DAG.getEntryNode(), Size,
+        SDValue Size = DAG.getGlobalAddress(SizeGV, SDLoc(Global), MVT::i32);
+        Size = DAG.getLoad(MVT::i32, SDLoc(Global), DAG.getEntryNode(), Size,
             MachinePointerInfo(SizeGV));
         Global = setBounds(DAG, Global, Size);
       }
@@ -3290,10 +3290,10 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDValue PtrOff = DAG.getPointerAdd(DL, StackPtr, FirstOffset);
     PtrOff = DAG.getNode(MipsISD::STACKTOCAP, DL, MVT::iFATPTR, PtrOff);
     PtrOff = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::iFATPTR,
-        DAG.getConstant(SetBounds, DL, MVT::i64), PtrOff,
+        DAG.getConstant(SetBounds, DL, MVT::i32), PtrOff,
         DAG.getIntPtrConstant(LastOffset, DL));
     PtrOff = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::iFATPTR,
-        DAG.getConstant(Intrinsic::cheri_cap_perms_and, DL, MVT::i64), PtrOff,
+        DAG.getConstant(Intrinsic::cheri_cap_perms_and, DL, MVT::i32), PtrOff,
         DAG.getIntPtrConstant(0xFFD7, DL));
     RegsToPass.push_back(std::make_pair(Mips::C13, PtrOff));
   }
@@ -3376,8 +3376,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // If we're in the sandbox ABI, then we need to turn the address into a
   // PCC-derived capability.
   if (ABI.IsCheriPureCap() && (Callee.getValueType() != MVT::iFATPTR)) {
-    auto GetPCC = DAG.getConstant(Intrinsic::cheri_pcc_get, DL, MVT::i64);
-    auto SetOffset = DAG.getConstant(Intrinsic::cheri_cap_offset_set, DL, MVT::i64);
+    auto GetPCC = DAG.getConstant(Intrinsic::cheri_pcc_get, DL, MVT::i32);
+    auto SetOffset = DAG.getConstant(Intrinsic::cheri_cap_offset_set, DL, MVT::i32);
     auto PCC = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::iFATPTR, GetPCC);
     Callee = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::iFATPTR,
         SetOffset, PCC, Callee);
@@ -4301,7 +4301,11 @@ EVT MipsTargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
       case 16:
         if (Subtarget.isCheri128())
           return MVT::iFATPTR;
-      case 8: return MVT::i64;
+      case 8: {
+        if (Subtarget.isCheri64())
+          return MVT::iFATPTR;
+        return MVT::i64;
+      }
       case 4: return MVT::i32;
       default: return MVT::i8;
     }

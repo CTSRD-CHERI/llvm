@@ -440,4 +440,7 @@
 /* Define to 1 if CHERI should assume 128-bit capabilities */
 #cmakedefine01 CHERI_IS_128
 
+/* Define to 1 if CHERI should assume 64-bit capabilities */
+#cmakedefine01 CHERI_IS_64
+
 #endif

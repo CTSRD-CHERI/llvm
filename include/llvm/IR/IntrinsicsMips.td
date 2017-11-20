@@ -1772,11 +1772,11 @@ def int_mips_xori_b : GCCBuiltin<"__builtin_msa_xori_b">,
 def int_mips_cap_cause_get :
   GCCBuiltinAlias<"__builtin_mips_cheri_get_cause">,
   GCCBuiltin<"__builtin_mips_cheri_cause_get">,
-  Intrinsic<[llvm_i64_ty], [], []>;
+  Intrinsic<[llvm_i32_ty], [], []>;
 def int_mips_cap_cause_set :
   GCCBuiltinAlias<"__builtin_mips_cheri_set_cause">,
   GCCBuiltin<"__builtin_mips_cheri_cause_set">,
-  Intrinsic<[], [llvm_i64_ty], []>;
+  Intrinsic<[], [llvm_i32_ty], []>;
 def int_mips_idc_get :
   GCCBuiltinAlias<"__builtin_mips_cheri_get_invoke_data_cap">,
   GCCBuiltin<"__builtin_mips_cheri_invoke_data_cap_get">,

@@ -661,6 +661,8 @@ MCObjectWriter *llvm::createMipsELFObjectWriter(raw_pwrite_stream &OS,
                                                 bool IsLittleEndian) {
   bool HasRelocationAddend = TT.getEnvironment() == Triple::ABIN32 ||
                              TT.getEnvironment() == Triple::ABI64 ||
+                             TT.getEnvironment() == Triple::Purecap32 ||
+                             TT.getEnvironment() == Triple::Purecap ||
                              TT.getEnvironment() == Triple::GNUABIN32 ||
                              TT.getEnvironment() == Triple::GNUABI64 ||
                              TT.getEnvironment() == Triple::AndroidABI64;

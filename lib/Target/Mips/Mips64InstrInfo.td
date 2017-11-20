@@ -551,13 +551,13 @@ def : MipsPat<(i64 (extloadi32 addr:$src)), (LW64 addr:$src)>;
 
 // hi/lo relocs
 let AdditionalPredicates = [NotInMicroMips] in
-defm : MipsHiLoRelocs<LUi64, DADDiu, ZERO_64, GPR64Opnd>, SYM_32;
+defm : MipsHiLoRelocs<LUi, ADDiu, ZERO, GPR32Opnd>, SYM_32;
 
-def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi64 tglobaladdr:$in)>;
-def : MipsPat<(MipsGotHi tjumptable:$in), (LUi64 tjumptable:$in)>;
-def : MipsPat<(MipsGotHi texternalsym:$in), (LUi64 texternalsym:$in)>;
+def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi tglobaladdr:$in)>;
+def : MipsPat<(MipsGotHi tjumptable:$in), (LUi tjumptable:$in)>;
+def : MipsPat<(MipsGotHi texternalsym:$in), (LUi texternalsym:$in)>;
 
-def : MipsPat<(MipsLo tjumptable:$in), (DADDiu ZERO_64, tjumptable:$in)>;
+def : MipsPat<(MipsLo tjumptable:$in), (ADDiu ZERO, tjumptable:$in)>;
 
 multiclass MipsHighestHigherHiLoRelocs<Instruction Lui, Instruction Daddiu> {
   def : MipsPat<(MipsJmpLink (i64 texternalsym:$dst)),

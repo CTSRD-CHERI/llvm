@@ -629,7 +629,11 @@ namespace llvm {
 #if CHERI_IS_128
       case iFATPTR: return 128;
 #else
+#if CHERI_IS_64
+      case iFATPTR: return 64;
+#else
       case iFATPTR: return 256;
+#endif
 #endif
       case iPTRAny:
       case iAny:

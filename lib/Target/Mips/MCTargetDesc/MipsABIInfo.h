@@ -38,6 +38,7 @@ public:
   static MipsABIInfo N32() { return MipsABIInfo(ABI::N32); }
   static MipsABIInfo N64() { return MipsABIInfo(ABI::N64); }
   static MipsABIInfo CheriPureCap() { return MipsABIInfo(ABI::N64, true); }
+  static MipsABIInfo CheriPureCap32() { return MipsABIInfo(ABI::N32, true); }
   static MipsABIInfo computeTargetABI(const Triple &TT, StringRef CPU,
                                       const MCTargetOptions &Options);
 

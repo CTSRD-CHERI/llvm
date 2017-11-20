@@ -728,6 +728,8 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // Machine
   if (Features[Mips::FeatureCnMips])
     EFlags |= ELF::EF_MIPS_MACH_OCTEON;
+  else if (Features[Mips::FeatureMipsCheri64])
+    EFlags |= ELF::EF_MIPS_MACH_CHERI64;
   else if (Features[Mips::FeatureMipsCheri128])
     EFlags |= ELF::EF_MIPS_MACH_CHERI128;
   else if (Features[Mips::FeatureMipsCheri])

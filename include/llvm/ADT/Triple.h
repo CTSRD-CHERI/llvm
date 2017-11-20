@@ -207,10 +207,11 @@ public:
     ABI32,
     ABIN32,
     ABI64,
+    Purecap32,
+    Purecap,
     GNUABI32,
     GNUABIN32,
-    Purecap,
-    LastEnvironmentType = Purecap
+    LastEnvironmentType = GNUABIN32
   };
   enum ObjectFormatType {
     UnknownObjectFormat,

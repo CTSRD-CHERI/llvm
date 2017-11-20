@@ -28,6 +28,7 @@ class CheriPureCapABI : public ModulePass, public InstVisitor<CheriPureCapABI> {
   Module *M;
   llvm::SmallVector<AllocaInst *, 16> Allocas;
   bool IsCheri128;
+  bool IsCheri64;
 
   virtual StringRef getPassName() const { return "CHERI sandbox ABI setup"; }
 
@@ -52,6 +53,7 @@ public:
     DL->setAllocaAS(0);
     M->setDataLayout(*DL);
     IsCheri128 = DL->getPointerSizeInBits(200) == 128;
+    IsCheri64 = DL->getPointerSizeInBits(200) == 64;
     bool Modified = false;
     for (Function &F : Mod)
       Modified |= runOnFunction(F);
@@ -121,7 +123,7 @@ public:
       assert(Alloca->getType()->getPointerAddressSpace() == 0);
       // For imprecise capabilities, we need to increase the alignment for
       // on-stack allocations to ensure that we can create precise bounds.
-      if (IsCheri128) {
+      if (IsCheri128 || IsCheri64) {
         uint64_t AllocaSize = DL->getTypeAllocSize(AllocationTy);
         if (ConstantInt *CI = dyn_cast<ConstantInt>(ArraySize))
           AllocaSize *= CI->getValue().getLimitedValue();
@@ -141,7 +143,7 @@ public:
 
       // Get the size of the alloca
       unsigned ElementSize = DL->getTypeAllocSize(AllocationTy);
-      Value *Size = ConstantInt::get(Type::getInt64Ty(C), ElementSize);
+      Value *Size = ConstantInt::get(Type::getInt32Ty(C), ElementSize);
       if (AI->isArrayAllocation())
         Size = B.CreateMul(Size, AI->getArraySize());
       Alloca = B.CreateCall(SetLenFun, {Alloca, Size});

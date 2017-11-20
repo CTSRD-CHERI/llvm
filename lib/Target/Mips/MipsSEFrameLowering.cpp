@@ -770,7 +770,7 @@ bool MipsSEFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // an extra spill slot for the return capability, if $ra is spilled.
   if (CHERICFI && STI.isCheri() && !STI.getABI().IsCheriPureCap())
     for (auto &I : CSI)
-      if (I.getReg() == Mips::RA_64) {
+      if (I.getReg() == Mips::RA) {
         CSI.push_back(CalleeSavedInfo(Mips::C16, 0));
         break;
       }

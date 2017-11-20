@@ -182,6 +182,30 @@ void MipsSEDAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
       .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_LO);
     return;
   }
+  if (ABI.IsN32()) {
+    if (ABI.IsCheriPureCap()) {
+      MF.getRegInfo().addLiveIn(Mips::C12);
+      MBB.addLiveIn(Mips::C12);
+      BuildMI(MBB, I, DL, TII.get(Mips::CGetOffset))
+        .addReg(Mips::T9, RegState::Define)
+        .addReg(Mips::C12);
+    } else {
+      MF.getRegInfo().addLiveIn(Mips::T9);
+      MBB.addLiveIn(Mips::T9);
+    }
+
+    // lui $v0, %hi(%neg(%gp_rel(fname)))
+    // addu $v1, $v0, $t9
+    // addiu $globalbasereg, $v1, %lo(%neg(%gp_rel(fname)))
+    const GlobalValue *FName = MF.getFunction();
+    BuildMI(MBB, I, DL, TII.get(Mips::LUi), V0)
+      .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
+    BuildMI(MBB, I, DL, TII.get(Mips::ADDu), V1).addReg(V0)
+      .addReg(Mips::T9);
+    BuildMI(MBB, I, DL, TII.get(Mips::ADDiu), GlobalBaseReg).addReg(V1)
+      .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_LO);
+    return;
+  }
 
   if (!MF.getTarget().isPositionIndependent()) {
     // Set global register to __gnu_local_gp.
@@ -197,19 +221,6 @@ void MipsSEDAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
 
   MF.getRegInfo().addLiveIn(Mips::T9);
   MBB.addLiveIn(Mips::T9);
-
-  if (ABI.IsN32()) {
-    // lui $v0, %hi(%neg(%gp_rel(fname)))
-    // addu $v1, $v0, $t9
-    // addiu $globalbasereg, $v1, %lo(%neg(%gp_rel(fname)))
-    const GlobalValue *FName = MF.getFunction();
-    BuildMI(MBB, I, DL, TII.get(Mips::LUi), V0)
-      .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
-    BuildMI(MBB, I, DL, TII.get(Mips::ADDu), V1).addReg(V0).addReg(Mips::T9);
-    BuildMI(MBB, I, DL, TII.get(Mips::ADDiu), GlobalBaseReg).addReg(V1)
-      .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_LO);
-    return;
-  }
 
   assert(ABI.IsO32());
 

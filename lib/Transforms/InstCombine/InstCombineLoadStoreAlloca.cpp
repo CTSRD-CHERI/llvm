@@ -612,7 +612,10 @@ static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
   if (!Ty->isIntegerTy() && Ty->isSized() &&
       DL.isLegalInteger(DL.getTypeStoreSizeInBits(Ty)) &&
       DL.getTypeStoreSizeInBits(Ty) == DL.getTypeSizeInBits(Ty) &&
-      !DL.isNonIntegralPointerType(Ty)) {
+      !DL.isNonIntegralPointerType(Ty) &&
+      // CHERI capabilities are not integral-typed, but there is still a notion of
+      // ptrtoint and inttoptr, thus the following case
+      !(Ty->isPointerTy() && Ty->getPointerAddressSpace() == 200)) {
     if (all_of(LI.users(), [&LI](User *U) {
           auto *SI = dyn_cast<StoreInst>(U);
           return SI && SI->getPointerOperand() != &LI &&

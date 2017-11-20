@@ -82,7 +82,7 @@ static inline unsigned getLoadStoreOffsetSizeInBits(const unsigned Opcode,
     return 8 + 3 /* scale factor */;
   case Mips::LOADCAP:
   case Mips::STORECAP:
-    return 11 + 4 /* scale factor */;
+    return 11 + 3 /* scale factor */;
   case Mips::LD_B:
   case Mips::ST_B:
     return 10;
@@ -161,7 +161,7 @@ static inline unsigned getLoadStoreOffsetAlign(const unsigned Opcode) {
     return 8;
   case Mips::LOADCAP:
   case Mips::STORECAP:
-    return 16;
+    return 8;
   case Mips::LD_H:
   case Mips::ST_H:
     return 2;
