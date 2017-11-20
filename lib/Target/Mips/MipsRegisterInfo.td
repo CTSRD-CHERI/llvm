@@ -417,6 +417,8 @@ def CheriRegs : RegisterClass<"Mips", [iFATPTR], 256, (add
   let Alignment = 256;
 }
 
+def FakeCheriRegs : RegisterClass<"Mips", [iFATPTR], 256, (add C0)>;
+
 // 64bit fp:
 // * FGR64  - 32 64-bit registers
 // * AFGR64 - 16 32-bit even registers (32-bit FP Mode)

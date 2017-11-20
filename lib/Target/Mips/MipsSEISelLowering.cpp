@@ -175,7 +175,8 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::iFATPTR, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::iFATPTR, Expand);
     setOperationAction(ISD::BR_CC, MVT::iFATPTR, Expand);
-  }
+  } else
+    addRegisterClass(MVT::iFATPTR, &Mips::FakeCheriRegsRegClass);
 
   setOperationAction(ISD::SMUL_LOHI,          MVT::i32, Custom);
   setOperationAction(ISD::UMUL_LOHI,          MVT::i32, Custom);
