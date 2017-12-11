@@ -132,3 +132,6 @@ def int_cheri_cap_to_pointer:
 def int_cheri_cap_from_pointer:
   Intrinsic<[llvm_fatptr_ty], [llvm_fatptr_ty, llvm_i32_ty], [IntrNoMem]>;
 
+def int_cheri_cap_subset_test:
+  GCCBuiltin<"__builtin_cheri_subset_test">,
+  Intrinsic<[llvm_i32_ty], [llvm_fatptr_ty, llvm_fatptr_ty], [IntrNoMem]>;
