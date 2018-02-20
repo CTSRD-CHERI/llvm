@@ -264,11 +264,11 @@ def int_mips_bposge32: GCCBuiltin<"__builtin_mips_bposge32">,
   Intrinsic<[llvm_i32_ty], [], [IntrReadMem]>;
 
 def int_mips_lbux: GCCBuiltin<"__builtin_mips_lbux">,
-  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadArgMem]>;
+  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_lhx: GCCBuiltin<"__builtin_mips_lhx">,
-  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadArgMem]>;
+  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_lwx: GCCBuiltin<"__builtin_mips_lwx">,
-  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadArgMem]>;
+  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
 
 //===----------------------------------------------------------------------===//
 // MIPS DSP Rev 2
@@ -1261,16 +1261,16 @@ def int_mips_insve_d : GCCBuiltin<"__builtin_msa_insve_d">,
 
 def int_mips_ld_b : GCCBuiltin<"__builtin_msa_ld_b">,
   Intrinsic<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i32_ty],
-  [IntrReadArgMem]>;
+  [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_ld_h : GCCBuiltin<"__builtin_msa_ld_h">,
   Intrinsic<[llvm_v8i16_ty], [llvm_ptr_ty, llvm_i32_ty],
-  [IntrReadArgMem]>;
+  [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_ld_w : GCCBuiltin<"__builtin_msa_ld_w">,
   Intrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i32_ty],
-  [IntrReadArgMem]>;
+  [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_ld_d : GCCBuiltin<"__builtin_msa_ld_d">,
   Intrinsic<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_i32_ty],
-  [IntrReadArgMem]>;
+  [IntrReadMem, IntrArgMemOnly]>;
 
 def int_mips_ldi_b : GCCBuiltin<"__builtin_msa_ldi_b">,
   Intrinsic<[llvm_v16i8_ty], [llvm_i32_ty], [IntrNoMem]>;
@@ -1685,16 +1685,16 @@ def int_mips_srlri_d : GCCBuiltin<"__builtin_msa_srlri_d">,
 
 def int_mips_st_b : GCCBuiltin<"__builtin_msa_st_b">,
   Intrinsic<[], [llvm_v16i8_ty, llvm_ptr_ty, llvm_i32_ty],
-  [IntrReadWriteArgMem]>;
+  [IntrArgMemOnly]>;
 def int_mips_st_h : GCCBuiltin<"__builtin_msa_st_h">,
   Intrinsic<[], [llvm_v8i16_ty, llvm_ptr_ty, llvm_i32_ty],
-  [IntrReadWriteArgMem]>;
+  [IntrArgMemOnly]>;
 def int_mips_st_w : GCCBuiltin<"__builtin_msa_st_w">,
   Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i32_ty],
-  [IntrReadWriteArgMem]>;
+  [IntrArgMemOnly]>;
 def int_mips_st_d : GCCBuiltin<"__builtin_msa_st_d">,
   Intrinsic<[], [llvm_v2i64_ty, llvm_ptr_ty, llvm_i32_ty],
-  [IntrReadWriteArgMem]>;
+  [IntrArgMemOnly]>;
 
 def int_mips_subs_s_b : GCCBuiltin<"__builtin_msa_subs_s_b">,
   Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>;
@@ -1770,40 +1770,40 @@ def int_mips_xori_b : GCCBuiltin<"__builtin_msa_xori_b">,
   Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
 def int_mips_cap_cause_get :
-  GCCBuiltinAlias<"__builtin_cheri_get_cause">,
-  GCCBuiltin<"__builtin_cheri_cause_get">,
+  GCCBuiltinAlias<"__builtin_mips_cheri_get_cause">,
+  GCCBuiltin<"__builtin_mips_cheri_cause_get">,
   Intrinsic<[llvm_i64_ty], [], []>;
 def int_mips_cap_cause_set :
-  GCCBuiltinAlias<"__builtin_cheri_set_cause">,
-  GCCBuiltin<"__builtin_cheri_cause_set">,
+  GCCBuiltinAlias<"__builtin_mips_cheri_set_cause">,
+  GCCBuiltin<"__builtin_mips_cheri_cause_set">,
   Intrinsic<[], [llvm_i64_ty], []>;
 def int_mips_idc_get :
-  GCCBuiltinAlias<"__builtin_cheri_get_invoke_data_cap">,
-  GCCBuiltin<"__builtin_cheri_invoke_data_cap_get">,
+  GCCBuiltinAlias<"__builtin_mips_cheri_get_invoke_data_cap">,
+  GCCBuiltin<"__builtin_mips_cheri_invoke_data_cap_get">,
   Intrinsic<[llvm_fatptr_ty], [], [IntrNoMem]>;
 def int_mips_kr1c_get :
-  GCCBuiltinAlias<"__builtin_cheri_get_kernel_cap1">,
-  GCCBuiltin<"__builtin_cheri_kernel_cap1_get">,
+  GCCBuiltinAlias<"__builtin_mips_cheri_get_kernel_cap1">,
+  GCCBuiltin<"__builtin_mips_cheri_kernel_cap1_get">,
   Intrinsic<[llvm_fatptr_ty], [], [IntrNoMem]>;
 def int_mips_kr2c_get :
-  GCCBuiltinAlias<"__builtin_cheri_get_kernel_cap2">,
-  GCCBuiltin<"__builtin_cheri_kernel_cap2_get">,
+  GCCBuiltinAlias<"__builtin_mips_cheri_get_kernel_cap2">,
+  GCCBuiltin<"__builtin_mips_cheri_kernel_cap2_get">,
   Intrinsic<[llvm_fatptr_ty], [], [IntrNoMem]>;
 def int_mips_kcc_get :
-  GCCBuiltinAlias<"__builtin_cheri_get_kernel_code_cap">,
-  GCCBuiltin<"__builtin_cheri_kernel_code_cap_get">,
+  GCCBuiltinAlias<"__builtin_mips_cheri_get_kernel_code_cap">,
+  GCCBuiltin<"__builtin_mips_cheri_kernel_code_cap_get">,
   Intrinsic<[llvm_fatptr_ty], [], [IntrNoMem]>;
 def int_mips_kdc_get :
-  GCCBuiltinAlias<"__builtin_cheri_get_kernel_data_cap">,
-  GCCBuiltin<"__builtin_cheri_kernel_data_cap_get">,
+  GCCBuiltinAlias<"__builtin_mips_cheri_get_kernel_data_cap">,
+  GCCBuiltin<"__builtin_mips_cheri_kernel_data_cap_get">,
   Intrinsic<[llvm_fatptr_ty], [], [IntrNoMem]>;
 def int_mips_epcc_get :
-  GCCBuiltinAlias<"__builtin_cheri_get_exception_program_counter_cap">,
-  GCCBuiltin<"__builtin_cheri_exception_program_counter_cap_get">,
+  GCCBuiltinAlias<"__builtin_mips_cheri_get_exception_program_counter_cap">,
+  GCCBuiltin<"__builtin_mips_cheri_exception_program_counter_cap_get">,
   Intrinsic<[llvm_fatptr_ty], [], [IntrNoMem]>;
 
 def int_mips_stack_to_cap :
-  Intrinsic<[llvm_fatptr_ty], [llvm_ptr_ty], [IntrNoMem]>;
+  Intrinsic<[llvm_fatptr_ty], [llvm_fatptr_ty], [IntrNoMem]>;
 
 
 }

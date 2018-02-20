@@ -1,4 +1,4 @@
-//===--------- MipsOptimizePICCall.cpp - Optimize PIC Calls ---------------===//
+//===- MipsOptimizePICCall.cpp - Optimize PIC Calls -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,14 +12,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Mips.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
-#include "MipsMachineFunction.h"
-#include "MipsTargetMachine.h"
+#include "Mips.h"
+#include "MipsRegisterInfo.h"
+#include "MipsSubtarget.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/RecyclingAllocator.h"
+#include <cassert>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -35,18 +54,18 @@ static cl::opt<bool> EraseGPOpnd("mips-erase-gp-opnd",
                                  cl::Hidden);
 
 namespace {
-typedef PointerUnion<const Value *, const PseudoSourceValue *> ValueType;
 
-typedef std::pair<unsigned, unsigned> CntRegP;
-typedef RecyclingAllocator<BumpPtrAllocator,
-                           ScopedHashTableVal<ValueType, CntRegP> >
-AllocatorTy;
-typedef ScopedHashTable<ValueType, CntRegP, DenseMapInfo<ValueType>,
-                        AllocatorTy> ScopedHTType;
+using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
+using CntRegP = std::pair<unsigned, unsigned>;
+using AllocatorTy = RecyclingAllocator<BumpPtrAllocator,
+                                       ScopedHashTableVal<ValueType, CntRegP>>;
+using ScopedHTType = ScopedHashTable<ValueType, CntRegP,
+                                     DenseMapInfo<ValueType>, AllocatorTy>;
 
 class MBBInfo {
 public:
   MBBInfo(MachineDomTreeNode *N);
+
   const MachineDomTreeNode *getNode() const;
   bool isVisited() const;
   void preVisit(ScopedHTType &ScopedHT);
@@ -59,9 +78,9 @@ private:
 
 class OptimizePICCall : public MachineFunctionPass {
 public:
-  OptimizePICCall(TargetMachine &tm) : MachineFunctionPass(ID) {}
+  OptimizePICCall() : MachineFunctionPass(ID) {}
 
-  const char *getPassName() const override { return "Mips OptimizePICCall"; }
+  StringRef getPassName() const override { return "Mips OptimizePICCall"; }
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -94,11 +113,13 @@ private:
   void incCntAndSetReg(ValueType Entry, unsigned Reg);
 
   ScopedHTType ScopedHT;
+
   static char ID;
 };
 
-char OptimizePICCall::ID = 0;
 } // end of anonymous namespace
+
+char OptimizePICCall::ID = 0;
 
 /// Return the first MachineOperand of MI if it is a used virtual register.
 static MachineOperand *getCallTargetRegOpnd(MachineInstr &MI) {
@@ -116,9 +137,10 @@ static MachineOperand *getCallTargetRegOpnd(MachineInstr &MI) {
 
 /// Return type of register Reg.
 static MVT::SimpleValueType getRegTy(unsigned Reg, MachineFunction &MF) {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(Reg);
-  assert(RC->vt_end() - RC->vt_begin() == 1);
-  return *RC->vt_begin();
+  assert(TRI.legalclasstypes_end(*RC) - TRI.legalclasstypes_begin(*RC) == 1);
+  return *TRI.legalclasstypes_begin(*RC);
 }
 
 /// Do the following transformation:
@@ -133,7 +155,7 @@ static void setCallTargetReg(MachineBasicBlock *MBB,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   unsigned SrcReg = I->getOperand(0).getReg();
   unsigned DstReg = getRegTy(SrcReg, MF) == MVT::i32 ? Mips::T9 : Mips::T9_64;
-  if (getRegTy(SrcReg, MF) == MVT::iFATPTR)
+  if (MVT(getRegTy(SrcReg, MF)).isFatPointer())
     DstReg = Mips::C12;
   BuildMI(*MBB, I, I->getDebugLoc(), TII.get(TargetOpcode::COPY), DstReg)
       .addReg(SrcReg);
@@ -157,7 +179,7 @@ static void eraseGPOpnd(MachineInstr &MI) {
     }
   }
 
-  llvm_unreachable(nullptr);
+  // If compiling with -mx-got, we can fail to remove the GP register.
 }
 
 MBBInfo::MBBInfo(MachineDomTreeNode *N) : Node(N), HTScope(nullptr) {}
@@ -258,7 +280,7 @@ bool OptimizePICCall::isCallViaRegister(MachineInstr &MI, unsigned &Reg,
 
   // Get the instruction that loads the function address from the GOT.
   Reg = MO->getReg();
-  Val = (Value*)nullptr;
+  Val = nullptr;
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   MachineInstr *DefMI = MRI.getVRegDef(Reg);
 
@@ -298,6 +320,6 @@ void OptimizePICCall::incCntAndSetReg(ValueType Entry, unsigned Reg) {
 }
 
 /// Return an OptimizeCall object.
-FunctionPass *llvm::createMipsOptimizePICCallPass(MipsTargetMachine &TM) {
-  return new OptimizePICCall(TM);
+FunctionPass *llvm::createMipsOptimizePICCallPass() {
+  return new OptimizePICCall();
 }

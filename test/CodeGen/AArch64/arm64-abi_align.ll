@@ -1,6 +1,5 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone -enable-misched=false | FileCheck %s
-; RUN: llc < %s -O0 | FileCheck -check-prefix=FAST %s
-target triple = "arm64-apple-darwin"
+; RUN: llc < %s -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false -disable-fp-elim | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-darwin -O0 -disable-fp-elim -fast-isel | FileCheck -check-prefix=FAST %s
 
 ; rdar://12648441
 ; Generated from arm64-arguments.c with -O2.
@@ -74,7 +73,7 @@ define i32 @caller38_stack() #1 {
 entry:
 ; CHECK-LABEL: caller38_stack
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #8]
-; CHECK: movz w[[C:[0-9]+]], #0x9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
   %0 = load i64, i64* bitcast (%struct.s38* @g38 to i64*), align 4
   %1 = load i64, i64* bitcast (%struct.s38* @g38_2 to i64*), align 4
@@ -128,7 +127,7 @@ entry:
 ; CHECK-LABEL: caller39_stack
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #32]
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]
-; CHECK: movz w[[C:[0-9]+]], #0x9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
   %0 = load i128, i128* bitcast (%struct.s39* @g39 to i128*), align 16
   %1 = load i128, i128* bitcast (%struct.s39* @g39_2 to i128*), align 16
@@ -184,7 +183,7 @@ entry:
 ; CHECK-LABEL: caller40_stack
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #24]
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #8]
-; CHECK: movz w[[C:[0-9]+]], #0x9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
   %0 = load [2 x i64], [2 x i64]* bitcast (%struct.s40* @g40 to [2 x i64]*), align 4
   %1 = load [2 x i64], [2 x i64]* bitcast (%struct.s40* @g40_2 to [2 x i64]*), align 4
@@ -238,7 +237,7 @@ entry:
 ; CHECK-LABEL: caller41_stack
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #32]
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]
-; CHECK: movz w[[C:[0-9]+]], #0x9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
   %0 = load i128, i128* bitcast (%struct.s41* @g41 to i128*), align 16
   %1 = load i128, i128* bitcast (%struct.s41* @g41_2 to i128*), align 16
@@ -281,17 +280,17 @@ entry:
 define i32 @caller42() #3 {
 entry:
 ; CHECK-LABEL: caller42
-; CHECK: str {{x[0-9]+}}, [sp, #48]
-; CHECK: str {{q[0-9]+}}, [sp, #32]
-; CHECK: str {{x[0-9]+}}, [sp, #16]
-; CHECK: str {{q[0-9]+}}, [sp]
+; CHECK-DAG: str {{x[0-9]+}}, [sp, #48]
+; CHECK-DAG: str {{q[0-9]+}}, [sp, #32]
+; CHECK-DAG: str {{x[0-9]+}}, [sp, #16]
+; CHECK-DAG: str {{q[0-9]+}}, [sp]
 ; CHECK: add x1, sp, #32
 ; CHECK: mov x2, sp
 ; Space for s1 is allocated at sp+32
 ; Space for s2 is allocated at sp
 
 ; FAST-LABEL: caller42
-; FAST: sub sp, sp, #96
+; FAST: sub sp, sp, #112
 ; Space for s1 is allocated at fp-24 = sp+72
 ; Space for s2 is allocated at sp+48
 ; FAST: sub x[[A:[0-9]+]], x29, #24
@@ -301,14 +300,14 @@ entry:
   %tmp = alloca %struct.s42, align 4
   %tmp1 = alloca %struct.s42, align 4
   %0 = bitcast %struct.s42* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast (%struct.s42* @g42 to i8*), i64 24, i32 4, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 bitcast (%struct.s42* @g42 to i8*), i64 24, i1 false), !tbaa.struct !4
   %1 = bitcast %struct.s42* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast (%struct.s42* @g42_2 to i8*), i64 24, i32 4, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 bitcast (%struct.s42* @g42_2 to i8*), i64 24, i1 false), !tbaa.struct !4
   %call = call i32 @f42(i32 3, %struct.s42* %tmp, %struct.s42* %tmp1) #5
   ret i32 %call
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) #4
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) #4
 
 declare i32 @f42_stack(i32 %i, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6,
                        i32 %i7, i32 %i8, i32 %i9, %struct.s42* nocapture %s1,
@@ -317,12 +316,12 @@ declare i32 @f42_stack(i32 %i, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6,
 define i32 @caller42_stack() #3 {
 entry:
 ; CHECK-LABEL: caller42_stack
-; CHECK: mov x29, sp
-; CHECK: sub sp, sp, #96
-; CHECK: stur {{x[0-9]+}}, [x29, #-16]
-; CHECK: stur {{q[0-9]+}}, [x29, #-32]
-; CHECK: str {{x[0-9]+}}, [sp, #48]
-; CHECK: str {{q[0-9]+}}, [sp, #32]
+; CHECK: sub sp, sp, #112
+; CHECK: add x29, sp, #96
+; CHECK-DAG: stur {{x[0-9]+}}, [x29, #-16]
+; CHECK-DAG: stur {{q[0-9]+}}, [x29, #-32]
+; CHECK-DAG: str {{x[0-9]+}}, [sp, #48]
+; CHECK-DAG: str {{q[0-9]+}}, [sp, #32]
 ; Space for s1 is allocated at x29-32 = sp+64
 ; Space for s2 is allocated at sp+32
 ; CHECK: add x[[B:[0-9]+]], sp, #32
@@ -330,7 +329,7 @@ entry:
 ; CHECK: sub x[[A:[0-9]+]], x29, #32
 ; Address of s1 is passed on stack at sp+8
 ; CHECK: str x[[A]], [sp, #8]
-; CHECK: movz w[[C:[0-9]+]], #0x9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
 
 ; FAST-LABEL: caller42_stack
@@ -347,9 +346,9 @@ entry:
   %tmp = alloca %struct.s42, align 4
   %tmp1 = alloca %struct.s42, align 4
   %0 = bitcast %struct.s42* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast (%struct.s42* @g42 to i8*), i64 24, i32 4, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 bitcast (%struct.s42* @g42 to i8*), i64 24, i1 false), !tbaa.struct !4
   %1 = bitcast %struct.s42* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast (%struct.s42* @g42_2 to i8*), i64 24, i32 4, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 bitcast (%struct.s42* @g42_2 to i8*), i64 24, i1 false), !tbaa.struct !4
   %call = call i32 @f42_stack(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                        i32 8, i32 9, %struct.s42* %tmp, %struct.s42* %tmp1) #5
   ret i32 %call
@@ -389,17 +388,17 @@ entry:
 define i32 @caller43() #3 {
 entry:
 ; CHECK-LABEL: caller43
-; CHECK: str {{q[0-9]+}}, [sp, #48]
-; CHECK: str {{q[0-9]+}}, [sp, #32]
-; CHECK: str {{q[0-9]+}}, [sp, #16]
-; CHECK: str {{q[0-9]+}}, [sp]
+; CHECK-DAG: str {{q[0-9]+}}, [sp, #48]
+; CHECK-DAG: str {{q[0-9]+}}, [sp, #32]
+; CHECK-DAG: str {{q[0-9]+}}, [sp, #16]
+; CHECK-DAG: str {{q[0-9]+}}, [sp]
 ; CHECK: add x1, sp, #32
 ; CHECK: mov x2, sp
 ; Space for s1 is allocated at sp+32
 ; Space for s2 is allocated at sp
 
 ; FAST-LABEL: caller43
-; FAST: mov x29, sp
+; FAST: add x29, sp, #64
 ; Space for s1 is allocated at sp+32
 ; Space for s2 is allocated at sp
 ; FAST: add x1, sp, #32
@@ -415,9 +414,9 @@ entry:
   %tmp = alloca %struct.s43, align 16
   %tmp1 = alloca %struct.s43, align 16
   %0 = bitcast %struct.s43* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast (%struct.s43* @g43 to i8*), i64 32, i32 16, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %0, i8* align 16 bitcast (%struct.s43* @g43 to i8*), i64 32, i1 false), !tbaa.struct !4
   %1 = bitcast %struct.s43* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast (%struct.s43* @g43_2 to i8*), i64 32, i32 16, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %1, i8* align 16 bitcast (%struct.s43* @g43_2 to i8*), i64 32, i1 false), !tbaa.struct !4
   %call = call i32 @f43(i32 3, %struct.s43* %tmp, %struct.s43* %tmp1) #5
   ret i32 %call
 }
@@ -429,12 +428,12 @@ declare i32 @f43_stack(i32 %i, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6,
 define i32 @caller43_stack() #3 {
 entry:
 ; CHECK-LABEL: caller43_stack
-; CHECK: mov x29, sp
-; CHECK: sub sp, sp, #96
-; CHECK: stur {{q[0-9]+}}, [x29, #-16]
-; CHECK: stur {{q[0-9]+}}, [x29, #-32]
-; CHECK: str {{q[0-9]+}}, [sp, #48]
-; CHECK: str {{q[0-9]+}}, [sp, #32]
+; CHECK: sub sp, sp, #112
+; CHECK: add x29, sp, #96
+; CHECK-DAG: stur {{q[0-9]+}}, [x29, #-16]
+; CHECK-DAG: stur {{q[0-9]+}}, [x29, #-32]
+; CHECK-DAG: str {{q[0-9]+}}, [sp, #48]
+; CHECK-DAG: str {{q[0-9]+}}, [sp, #32]
 ; Space for s1 is allocated at x29-32 = sp+64
 ; Space for s2 is allocated at sp+32
 ; CHECK: add x[[B:[0-9]+]], sp, #32
@@ -442,11 +441,11 @@ entry:
 ; CHECK: sub x[[A:[0-9]+]], x29, #32
 ; Address of s1 is passed on stack at sp+8
 ; CHECK: str x[[A]], [sp, #8]
-; CHECK: movz w[[C:[0-9]+]], #0x9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
 
 ; FAST-LABEL: caller43_stack
-; FAST: sub sp, sp, #96
+; FAST: sub sp, sp, #112
 ; Space for s1 is allocated at fp-32 = sp+64
 ; Space for s2 is allocated at sp+32
 ; FAST: sub x[[A:[0-9]+]], x29, #32
@@ -466,9 +465,9 @@ entry:
   %tmp = alloca %struct.s43, align 16
   %tmp1 = alloca %struct.s43, align 16
   %0 = bitcast %struct.s43* %tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast (%struct.s43* @g43 to i8*), i64 32, i32 16, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %0, i8* align 16 bitcast (%struct.s43* @g43 to i8*), i64 32, i1 false), !tbaa.struct !4
   %1 = bitcast %struct.s43* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* bitcast (%struct.s43* @g43_2 to i8*), i64 32, i32 16, i1 false), !tbaa.struct !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %1, i8* align 16 bitcast (%struct.s43* @g43_2 to i8*), i64 32, i1 false), !tbaa.struct !4
   %call = call i32 @f43_stack(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                        i32 8, i32 9, %struct.s43* %tmp, %struct.s43* %tmp1) #5
   ret i32 %call
@@ -508,7 +507,7 @@ entry:
 ; "i64 %0" should be in register x7.
 ; "i32 8" should be on stack at [sp].
 ; CHECK: ldr x7, [{{x[0-9]+}}]
-; CHECK: str {{w[0-9]+}}, [sp, #-16]!
+; CHECK: str {{w[0-9]+}}, [sp]
 ; FAST-LABEL: i64_split
 ; FAST: ldr x7, [{{x[0-9]+}}]
 ; FAST: mov x[[R0:[0-9]+]], sp

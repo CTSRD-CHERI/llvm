@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 ; We have to apply the less restrictive TailCallKind of the call site being
 ; inlined and any call sites cloned into the caller.
@@ -67,7 +68,7 @@ define void @test_byval_a(i32* byval %p) {
 
 ; Don't insert a stack restore, we're about to return.
 ; CHECK: define void @test_dynalloca_a(
-; CHECK: call i8* @llvm.stacksave(
+; CHECK: call i8* @llvm.stacksave.p0i8(
 ; CHECK: alloca i8, i32 %n
 ; CHECK: musttail call void @test_dynalloca_c(
 ; CHECK-NEXT: ret void
@@ -178,5 +179,20 @@ d:
 }
 define i32 @test_mixedret_a(i1 zeroext %b) {
   %rv = musttail call i32 @test_mixedret_b(i1 zeroext %b)
+  ret i32 %rv
+}
+
+declare i32 @donttailcall()
+
+define i32 @notail() {
+  %rv = notail call i32 @donttailcall()
+  ret i32 %rv
+}
+
+; CHECK: @test_notail
+; CHECK: notail call i32 @donttailcall
+; CHECK: ret
+define i32 @test_notail() {
+  %rv = tail call i32 @notail()
   ret i32 %rv
 }

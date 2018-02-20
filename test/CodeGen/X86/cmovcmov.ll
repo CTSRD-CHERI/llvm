@@ -53,8 +53,7 @@ entry:
 ; NOCMOV-NEXT:   leal  12(%esp), %ecx
 ; NOCMOV-NEXT: [[TBB]]:
 ; NOCMOV-NEXT:   movl  (%ecx), %eax
-; NOCMOV-NEXT:   orl  $4, %ecx
-; NOCMOV-NEXT:   movl  (%ecx), %edx
+; NOCMOV-NEXT:   movl  4(%ecx), %edx
 ; NOCMOV-NEXT:   retl
 define i64 @test_select_fcmp_oeq_i64(float %a, float %b, i64 %c, i64 %d) #0 {
 entry:
@@ -82,8 +81,7 @@ entry:
 ; NOCMOV-NEXT:   leal  20(%esp), %ecx
 ; NOCMOV-NEXT: [[TBB]]:
 ; NOCMOV-NEXT:   movl  (%ecx), %eax
-; NOCMOV-NEXT:   orl  $4, %ecx
-; NOCMOV-NEXT:   movl  (%ecx), %edx
+; NOCMOV-NEXT:   movl  4(%ecx), %edx
 ; NOCMOV-NEXT:   retl
 define i64 @test_select_fcmp_une_i64(float %a, float %b, i64 %c, i64 %d) #0 {
 entry:
@@ -224,3 +222,59 @@ entry:
 }
 
 attributes #0 = { nounwind }
+
+@g8 = global i8 0
+
+; The following test failed because llvm had a bug where a structure like:
+;
+; %12 = CMOV_GR8 %7, %11 ... (lt)
+; %13 = CMOV_GR8 %12, %11 ... (gt)
+;
+; was lowered to:
+;
+; The first two cmovs got expanded to:
+; %bb.0:
+;   JL_1 %bb.9
+; %bb.7:
+;   JG_1 %bb.9
+; %bb.8:
+; %bb.9:
+;   %12 = phi(%7, %bb.8, %11, %bb.0, %12, %bb.7)
+;   %13 = COPY %12
+; Which was invalid as %12 is not the same value as %13
+
+; CHECK-LABEL: no_cascade_opt:
+; CMOV-DAG: cmpl %edx, %esi
+; CMOV-DAG: movb $20, %al
+; CMOV-DAG: movb $20, %dl
+; CMOV:   jge [[BB2:.LBB[0-9_]+]]
+; CMOV:   jle [[BB3:.LBB[0-9_]+]]
+; CMOV: [[BB0:.LBB[0-9_]+]]
+; CMOV:   testl %edi, %edi
+; CMOV:   jne [[BB4:.LBB[0-9_]+]]
+; CMOV: [[BB1:.LBB[0-9_]+]]
+; CMOV:   movb %al, g8(%rip)
+; CMOV:   retq
+; CMOV: [[BB2]]:
+; CMOV:   movl %ecx, %edx
+; CMOV:   jg [[BB0]]
+; CMOV: [[BB3]]:
+; CMOV:   movl %edx, %eax
+; CMOV:   testl %edi, %edi
+; CMOV:   je [[BB1]]
+; CMOV: [[BB4]]:
+; CMOV:   movl %edx, %eax
+; CMOV:   movb %al, g8(%rip)
+; CMOV:   retq
+define void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {
+entry:
+  %c0 = icmp eq i32 %v0, 0
+  %c1 = icmp slt i32 %v1, %v2
+  %c2 = icmp sgt i32 %v1, %v2
+  %trunc = trunc i32 %v3 to i8
+  %sel0 = select i1 %c1, i8 20, i8 %trunc
+  %sel1 = select i1 %c2, i8 20, i8 %sel0
+  %sel2 = select i1 %c0, i8 %sel1, i8 %sel0
+  store volatile i8 %sel2, i8* @g8
+  ret void
+}

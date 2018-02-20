@@ -256,7 +256,7 @@ _clamp0g:
         cmpwi cr0, r3, 0
         li r2, 0
         blt cr0, LBB1_2
-; BB#1:                                                     ; %entry
+; %bb.1:                                                    ; %entry
         mr r2, r3
 LBB1_2:                                                     ; %entry
         mr r3, r2
@@ -589,6 +589,17 @@ entry:
 	%tmp34 = zext i1 %tmp3 to i32		; <i32> [#uses=1]
 	ret i32 %tmp34
 }
+
+//===---------------------------------------------------------------------===//
+for the following code:
+
+void foo (float *__restrict__ a, int *__restrict__ b, int n) {
+      a[n] = b[n]  * 2.321;
+}
+
+we load b[n] to GPR, then move it VSX register and convert it float. We should 
+use vsx scalar integer load instructions to avoid direct moves
+
 //===----------------------------------------------------------------------===//
 ; RUN: llvm-as < %s | llc -march=ppc32 | not grep fneg
 
@@ -647,3 +658,8 @@ Instruction fusion was introduced in ISA 2.06 and more opportunities added in
 ISA 2.07.  LLVM needs to add infrastructure to recognize fusion opportunities
 and force instruction pairs to be scheduled together.
 
+-----------------------------------------------------------------------------
+
+More general handling of any_extend and zero_extend:
+
+See https://reviews.llvm.org/D24924#555306

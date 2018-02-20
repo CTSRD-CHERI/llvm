@@ -21,13 +21,11 @@
 
 ; Verify that SROA creates a variable piece when splitting i1.
 ; CHECK: %[[I1:.*]] = alloca [12 x i8], align 4
-; CHECK: call void @llvm.dbg.declare(metadata [12 x i8]* %[[I1]], metadata ![[VAR:[0-9]+]], metadata ![[PIECE1:[0-9]+]])
-; CHECK: call void @llvm.dbg.value(metadata i32 %[[A:.*]], i64 0, metadata ![[VAR]], metadata ![[PIECE2:[0-9]+]])
+; CHECK: call void @llvm.dbg.declare(metadata [12 x i8]* %[[I1]], metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 96))
+; CHECK: call void @llvm.dbg.value(metadata i32 %[[A:.*]], metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
 ; CHECK: ret i32 %[[A]]
 ; Read Var and Piece:
 ; CHECK: ![[VAR]] = !DILocalVariable(name: "i1",{{.*}} line: 11,
-; CHECK: ![[PIECE1]] = !DIExpression(DW_OP_bit_piece, 32, 96)
-; CHECK: ![[PIECE2]] = !DIExpression(DW_OP_bit_piece, 0, 32)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
@@ -36,7 +34,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 %struct.Inner = type { i32, i64 }
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @foo(%struct.Outer* byval align 8 %outer) #0 {
+define i32 @foo(%struct.Outer* byval align 8 %outer) #0 !dbg !4 {
 entry:
   %i1 = alloca %struct.Inner, align 8
   call void @llvm.dbg.declare(metadata %struct.Outer* %outer, metadata !25, metadata !2), !dbg !26
@@ -45,7 +43,7 @@ entry:
   %arrayidx = getelementptr inbounds [2 x %struct.Inner], [2 x %struct.Inner]* %inner, i32 0, i64 1, !dbg !28
   %0 = bitcast %struct.Inner* %i1 to i8*, !dbg !28
   %1 = bitcast %struct.Inner* %arrayidx to i8*, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 8, i1 false), !dbg !28
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %0, i8* align 8 %1, i64 16, i1 false), !dbg !28
   %a = getelementptr inbounds %struct.Inner, %struct.Inner* %i1, i32 0, i32 0, !dbg !29
   %2 = load i32, i32* %a, align 4, !dbg !29
   ret i32 %2, !dbg !29
@@ -55,7 +53,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone }
@@ -65,11 +63,10 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!22, !23}
 !llvm.ident = !{!24}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !{}, retainedTypes: !{}, subprograms: !3, globals: !{}, imports: !{})
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !{}, retainedTypes: !{}, globals: !{}, imports: !{})
 !1 = !DIFile(filename: "sroasplit-1.c", directory: "")
 !2 = !DIExpression()
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 10, file: !1, scope: !5, type: !6, function: i32 (%struct.Outer*)* @foo, variables: !{})
+!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !{})
 !5 = !DIFile(filename: "sroasplit-1.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !9}

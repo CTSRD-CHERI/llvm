@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=generic -march=x86-64 -mattr=+avx -mtriple=i686-apple-darwin10 | FileCheck %s
-; RUN: llc < %s -mcpu=generic -stackrealign -stack-alignment=32 -march=x86-64 -mattr=+avx -mtriple=i686-apple-darwin10 | FileCheck %s -check-prefix=FORCE-ALIGN
+; RUN: llc < %s -stack-symbol-ordering=0 -mcpu=generic -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
+; RUN: llc < %s -stack-symbol-ordering=0 -mcpu=generic -stackrealign -stack-alignment=32 -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s -check-prefix=FORCE-ALIGN
 ; rdar://11496434
 
 ; no VLAs or dynamic alignment
@@ -38,7 +38,7 @@ entry:
 ; CHECK: subq ${{[0-9]+}}, %rsp
 ;
 ; CHECK: leaq {{[0-9]*}}(%rsp), %rdi
-; CHECK: leaq {{[0-9]*}}(%rsp), %rsi
+; CHECK: movq %rsp, %rsi
 ; CHECK: callq _t2_helper
 ;
 ; CHECK: movq %rbp, %rsp
@@ -60,12 +60,10 @@ entry:
 ; CHECK: _t3
 ; CHECK: pushq %rbp
 ; CHECK: movq %rsp, %rbp
-; CHECK: pushq %rbx
 ; CHECK-NOT: andq $-{{[0-9]+}}, %rsp
 ; CHECK: subq ${{[0-9]+}}, %rsp
 ;
-; CHECK: leaq -{{[0-9]+}}(%rbp), %rsp
-; CHECK: popq %rbx
+; CHECK: movq %rbp, %rsp
 ; CHECK: popq %rbp
 }
 
@@ -85,19 +83,17 @@ entry:
 ; CHECK: _t4
 ; CHECK: pushq %rbp
 ; CHECK: movq %rsp, %rbp
-; CHECK: pushq %r14
 ; CHECK: pushq %rbx
 ; CHECK: andq $-32, %rsp
 ; CHECK: subq ${{[0-9]+}}, %rsp
 ; CHECK: movq %rsp, %rbx
 ;
 ; CHECK: leaq {{[0-9]*}}(%rbx), %rdi
-; CHECK: leaq {{[0-9]*}}(%rbx), %rdx
+; CHECK: movq %rbx, %rdx
 ; CHECK: callq   _t4_helper
 ;
-; CHECK: leaq -16(%rbp), %rsp
+; CHECK: leaq -{{[0-9]+}}(%rbp), %rsp
 ; CHECK: popq %rbx
-; CHECK: popq %r14
 ; CHECK: popq %rbp
 }
 
@@ -183,11 +179,11 @@ entry:
 ; CHECK:     popq %rbp
 }
 
-declare i8* @llvm.stacksave() nounwind
+declare i8* @llvm.stacksave.p0i8() nounwind
 
 declare void @bar(i32, i32*, %struct.struct_t* byval align 8)
 
-declare void @llvm.stackrestore(i8*) nounwind
+declare void @llvm.stackrestore.p0i8(i8*) nounwind
 
 
 ; Test when forcing stack alignment

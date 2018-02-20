@@ -12,12 +12,12 @@
     .globl  _main
     .align  16, 0x90
 _main:                                  # @main
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
     subl    $4, %esp
     movl    $_test_weak, %eax
     testl   %eax, %eax
     je      LBB0_2
-# BB#1:                                 # %if.then
+# %bb.1:                                # %if.then
     call    _test_weak
     movl    $1, %eax
     addl    $4, %esp
@@ -33,6 +33,16 @@ LBB0_2:                                 # %return
     _test_weak_alias=_main
 
 // CHECK: Symbols [
+
+// CHECK:      Symbol {
+// CHECK:        Name: _main
+// CHECK-NEXT:   Value: 0
+// CHECK-NEXT:   Section: .text
+// CHECK-NEXT:   BaseType: Null
+// CHECK-NEXT:   ComplexType: Function
+// CHECK-NEXT:   StorageClass: External
+// CHECK-NEXT:   AuxSymbolCount: 0
+// CHECK-NEXT: }
 
 // CHECK:      Symbol {
 // CHECK:        Name:           _test_weak
@@ -67,7 +77,17 @@ LBB0_2:                                 # %return
 // CHECK-NEXT:   StorageClass:   WeakExternal
 // CHECK-NEXT:   AuxSymbolCount: 1
 // CHECK-NEXT:   AuxWeakExternal {
-// CHECK-NEXT:     Linked: _main
+// CHECK-NEXT:     Linked: .weak._test_weak_alias.default
 // CHECK-NEXT:      Search: Library
 // CHECK-NEXT:   }
+// CHECK-NEXT: }
+
+// CHECK:      Symbol {
+// CHECK:        Name: .weak._test_weak_alias.default
+// CHECK-NEXT:   Value: 0
+// CHECK-NEXT:   Section: .text
+// CHECK-NEXT:   BaseType: Null
+// CHECK-NEXT:   ComplexType: Null
+// CHECK-NEXT:   StorageClass: External
+// CHECK-NEXT:   AuxSymbolCount: 0
 // CHECK-NEXT: }

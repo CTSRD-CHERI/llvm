@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=ppc32 -mcpu=g5 | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mattr=-power8-vector | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mattr=-power8-vector | FileCheck %s -check-prefix=CHECK-LE
+; RUN: llc -verify-machineinstrs < %s -mcpu=g5 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mattr=-power8-vector | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mattr=-power8-vector | FileCheck %s -check-prefix=CHECK-LE
 
 target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f128:64:128"
 target triple = "powerpc-apple-darwin8"
@@ -18,7 +18,7 @@ entry:
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
 	store i32 %x, i32* %x_addr
 	%ap1 = bitcast i8** %ap to i8*		; <i8*> [#uses=1]
-	call void @llvm.va_start( i8* %ap1 )
+	call void @llvm.va_start.p0i8( i8* %ap1 )
 	%tmp = load i8*, i8** %ap, align 4		; <i8*> [#uses=1]
 	store i8* %tmp, i8** %ap.0, align 4
 	%tmp2 = load i8*, i8** %ap.0, align 4		; <i8*> [#uses=1]
@@ -42,4 +42,4 @@ return:		; preds = %entry
 	ret void
 }
 
-declare void @llvm.va_start(i8*) nounwind 
+declare void @llvm.va_start.p0i8(i8*) nounwind 

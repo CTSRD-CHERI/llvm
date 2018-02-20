@@ -42,7 +42,7 @@ try.cont:
 }
 
 ; CHECK:   .globl test1
-; CHECK:   .align 2
+; CHECK:   .p2align 2
 ; CHECK:   .type test1,%function
 ; CHECK-LABEL: test1:
 ; CHECK:   .fnstart
@@ -51,11 +51,11 @@ try.cont:
 
 ; CHECK:   .personality __gxx_personality_v0
 ; CHECK:   .handlerdata
-; CHECK:   .align 2
+; CHECK:   .p2align 2
 ; CHECK-LABEL: GCC_except_table0:
 ; CHECK-LABEL: .Lexception0:
 ; CHECK:   .byte 255                     @ @LPStart Encoding = omit
 ; CHECK:   .byte 0                       @ @TType Encoding = absptr
-; CHECK:   .asciz
-; CHECK:   .byte 3                       @ Call site Encoding = udata4
+; CHECK:   .uleb128 .Lttbase
+; CHECK:   .byte 1                       @ Call site Encoding = uleb128
 ; CHECK:   .fnend

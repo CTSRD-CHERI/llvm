@@ -74,8 +74,8 @@ declare void @terminatev()
 ; %do.body.i.i.i.
 
 ; CHECK-LABEL: __Z4foo1c:
-; CHECK: blx __Znwm
-; CHECK: {{.*}}@ %entry.do.body.i.i.i_crit_edge
+; CHECK: bl __Znwm
+; CHECK: {{.*}}@ %do.body.i.i.i.preheader
 ; CHECK: str r0, [sp, [[OFFSET:#[0-9]+]]]
 ; CHECK: {{.*}}@ %do.body.i.i.i
 ; CHECK: ldr [[R0:r[0-9]+]], [sp, [[OFFSET]]]
@@ -185,8 +185,8 @@ declare void @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__
 declare void @_Unwind_SjLj_Register({ i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }*)
 declare void @_Unwind_SjLj_Unregister({ i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }*)
 declare i8* @llvm.frameaddress(i32)
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare i8* @llvm.stacksave.p0i8()
+declare void @llvm.stackrestore.p0i8(i8*)
 declare i32 @llvm.eh.sjlj.setjmp(i8*)
 declare i8* @llvm.eh.sjlj.lsda()
 declare void @llvm.eh.sjlj.callsite(i32)

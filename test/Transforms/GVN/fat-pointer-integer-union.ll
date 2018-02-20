@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn -mtriple=cheri-unknown-freebsd %s | FileCheck %s
+; RUN: %cheri_opt -S -gvn %s | FileCheck %s
 ; ModuleID = 'union2.c'
 target datalayout = "E-m:m-pf200:256:256-i8:8:32-i16:16:32-i64:64-n32:64-S128-A200"
 target triple = "cheri-unknown-freebsd"
@@ -6,7 +6,7 @@ target triple = "cheri-unknown-freebsd"
 ; Function Attrs: nounwind
 define i32 @bar(i8 addrspace(200)* inreg %u.coerce) #0 {
 entry:
-  %u.sroa.0.sroa.0 = alloca i8 addrspace(200)*, align 32
+  %u.sroa.0.sroa.0 = alloca i8 addrspace(200)*, align 32, addrspace(200)
   store i8 addrspace(200)* %u.coerce, i8 addrspace(200)* addrspace(200)* %u.sroa.0.sroa.0, align 32
   %u.sroa.0.sroa.0.0.x.sroa_cast2 = bitcast i8 addrspace(200)* addrspace(200)* %u.sroa.0.sroa.0 to i32 addrspace(200)*
   %u.sroa.0.sroa.0.0.u.sroa.0.sroa.0.0.u.sroa.0.0.u.sroa.0.0. = load i32, i32 addrspace(200)* %u.sroa.0.sroa.0.0.x.sroa_cast2, align 32

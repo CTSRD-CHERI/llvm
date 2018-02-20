@@ -9,6 +9,8 @@ entry:
 ; --------
 ; CHECK-V4T:    push {[[SAVED:(r[4567](, )?)+]], lr}
 ; CHECK-V4T:    sub sp,
+; Stack is realigned because of the <6 x i32> type
+; CHECK-V4T:    mov sp, r4
 ; CHECK-V5T:    push {[[SAVED:(r[4567](, )?)+]], lr}
 
   %b = alloca <6 x i32>, align 16
@@ -21,11 +23,16 @@ entry:
 
 ; Epilogue
 ; --------
-; CHECK-V4T:         add sp,
+; Stack realignment means sp is restored from frame pointer
+; CHECK-V4T:         mov sp
+; CHECK-V4T-NEXT:    ldr [[POP:r[4567]]], [sp, #16]
+; CHECK-V4T-NEXT:    mov lr, [[POP]]
 ; CHECK-V4T-NEXT:    pop {[[SAVED]]}
-; We do not have any SP update to insert so we can just optimize
-; the pop sequence.
-; CHECK-V4T-NEXT:    pop {pc}
+; CHECK-V4T-NEXT     add sp, sp, #4
+; The ISA for v4 does not support pop pc, so make sure we do not emit
+; one even when we do not need to update SP.
+; CHECK-V4T-NOT:     pop {pc}
+; CHECK-V4T:         bx lr
 ; CHECK-V5T:         pop {[[SAVED]], pc}
 }
 
@@ -45,26 +52,23 @@ entry:
   store <4 x i32> <i32 42, i32 42, i32 42, i32 42>, <4 x i32>* %b, align 16
   store <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32>* %a, align 16
   %0 = load <4 x i32>, <4 x i32>* %a, align 16
-  call void @llvm.va_start(i8* null)
+  call void @llvm.va_start.p0i8(i8* null)
   ret <4 x i32> %0
 
 ; Epilogue
 ; --------
-; CHECK-V4T:         pop {[[SAVED]]}
-; CHECK-V4T-NEXT:    mov r12, [[POP_REG:r[0-7]]]
-; CHECK-V4T-NEXT:    pop {[[POP_REG]]}
-; CHECK-V4T-NEXT:    add sp,
-; CHECK-V4T-NEXT:    mov lr, [[POP_REG]]
-; CHECK-V4T-NEXT:    mov [[POP_REG]], r12
-; CHECK-V4T:         bx  lr
-; CHECK-V5T:         add sp,
+; CHECK-V4T:         ldr [[POP:r[4567]]], [sp, #12]
+; CHECK-V4T-NEXT:    mov lr, [[POP]]
+; CHECK-V4T-NEXT:    pop {[[SAVED]]}
+; CHECK-V4T-NEXT:    add sp, #16
+; CHECK-V4T-NEXT:    bx  lr
+; CHECK-V5T:         lsls r4
+; CHECK-V5T-NEXT:    mov sp, r4
+; CHECK-V5T:         ldr [[POP:r[4567]]], [sp, #12]
+; CHECK-V5T-NEXT:    mov lr, [[POP]]
 ; CHECK-V5T-NEXT:    pop {[[SAVED]]}
-; CHECK-V5T-NEXT:    mov r12, [[POP_REG:r[0-7]]]
-; CHECK-V5T-NEXT:    pop {[[POP_REG]]}
-; CHECK-V5T-NEXT:    add sp,
-; CHECK-V5T-NEXT:    mov lr, [[POP_REG]]
-; CHECK-V5T-NEXT:    mov [[POP_REG]], r12
-; CHECK-V5T-NEXT:    bx lr
+; CHECK-V5T-NEXT:    add sp, #16
+; CHECK-V5T-NEXT:    bx  lr
 }
 
 ; CHECK-V4T-LABEL: simpleframe
@@ -93,7 +97,13 @@ entry:
 ; Epilogue
 ; --------
 ; CHECK-V4T:    pop {[[SAVED]]}
-; CHECK-V4T:    pop {pc}
+; The ISA for v4 does not support pop pc, so make sure we do not emit
+; one even when we do not need to update SP.
+; CHECK-V4T-NOT:     pop {pc}
+; Pop the value of LR into a scratch lo register other than r0 (it is
+; used for the return value).
+; CHECK-V4T-NEXT:    pop {[[POP_REG:r[1-3]]]}
+; CHECK-V4T-NEXT:    bx [[POP_REG]]
 ; CHECK-V5T:    pop {[[SAVED]], pc}
 }
 
@@ -138,7 +148,7 @@ entry:
   %7 = load i32, i32* %d, align 4
   %add5 = add nsw i32 %add4, %7
   %add6 = add nsw i32 %add5, %i
-  call void @llvm.va_start(i8* null)
+  call void @llvm.va_start.p0i8(i8* null)
   ret i32 %add6
 
 ; Epilogue
@@ -187,7 +197,7 @@ entry:
 ; CHECK-V5T:    sub sp,
 ; CHECK-V5T:    push {[[SAVED:(r[4567](, )?)+]], lr}
 
-  call void @llvm.va_start(i8* null)
+  call void @llvm.va_start.p0i8(i8* null)
   ret i32 %i;
 ; Epilogue
 ; --------
@@ -205,4 +215,4 @@ entry:
 ; CHECK-V5T-NEXT:    bx [[POP_REG]]
 }
 
-declare void @llvm.va_start(i8*) nounwind
+declare void @llvm.va_start.p0i8(i8*) nounwind

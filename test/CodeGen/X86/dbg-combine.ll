@@ -24,7 +24,7 @@
 
 ; ModuleID = 'dbg-combine.c'
 ; Function Attrs: nounwind uwtable
-define i32 @foo() #0 {
+define i32 @foo() #0 !dbg !4 {
 entry:
   %elems = alloca i32, align 4
   %saved_stack = alloca i8*
@@ -33,7 +33,7 @@ entry:
   store i32 3, i32* %elems, align 4, !dbg !14
   %0 = load i32, i32* %elems, align 4, !dbg !15
   %1 = zext i32 %0 to i64, !dbg !16
-  %2 = call i8* @llvm.stacksave(), !dbg !16
+  %2 = call i8* @llvm.stacksave.p0i8(), !dbg !16
   store i8* %2, i8** %saved_stack, !dbg !16
   %vla = alloca i32, i64 %1, align 16, !dbg !16
   call void @llvm.dbg.declare(metadata i32* %vla, metadata !17, metadata !21), !dbg !22
@@ -53,7 +53,7 @@ entry:
   %5 = load i32, i32* %arrayidx5, align 4, !dbg !35
   store i32 1, i32* %cleanup.dest.slot
   %6 = load i8*, i8** %saved_stack, !dbg !36
-  call void @llvm.stackrestore(i8* %6), !dbg !36
+  call void @llvm.stackrestore.p0i8(i8* %6), !dbg !36
   ret i32 %5, !dbg !36
 }
 
@@ -61,10 +61,10 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare i8* @llvm.stacksave() #2
+declare i8* @llvm.stacksave.p0i8() #2
 
 ; Function Attrs: nounwind
-declare void @llvm.stackrestore(i8*) #2
+declare void @llvm.stackrestore.p0i8(i8*) #2
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
@@ -74,11 +74,10 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!9, !10}
 !llvm.ident = !{!11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.7.0 (trunk 227074)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.7.0 (trunk 227074)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "dbg-combine.c", directory: "/home/probinson/projects/scratch")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, isOptimized: false, scopeLine: 2, file: !1, scope: !5, type: !6, function: i32 ()* @foo, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, scopeLine: 2, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "dbg-combine.c", directory: "/home/probinson/projects/scratch")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8}

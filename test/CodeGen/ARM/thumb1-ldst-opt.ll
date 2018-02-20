@@ -1,4 +1,4 @@
-; RUN: llc -stop-after block-placement -o /dev/null %s | FileCheck %s
+; RUN: llc -stop-after block-placement -o - %s | FileCheck %s
 
 target triple = "thumbv6m-none-none"
 
@@ -22,6 +22,6 @@ entry:
 declare void @g(i32)
 
 ; CHECK-LABEL: name: foo
-; CHECK: [[BASE:%r[0-7]]], {{.*}} tADDi8
+; CHECK: [[BASE:\$r[0-7]]], {{.*}} tADDi8
 ; CHECK-NOT: [[BASE]] = tLDMIA_UPD {{.*}} [[BASE]]
 ; CHECK: tLDMIA killed [[BASE]], {{.*}} def [[BASE]]

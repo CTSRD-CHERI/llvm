@@ -41,7 +41,7 @@ define i32 @test2() {
 entry:
   %bins = alloca [16 x i64], align 16
   %0 = bitcast [16 x i64]* %bins to i8*
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 128, i32 16, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 16 %0, i8 0, i64 128, i1 false)
   br label %preheader
 
 preheader:                                        ; preds = %for.inc.1, %entry
@@ -88,4 +88,26 @@ for.inc.1:                                        ; preds = %for.body.1, %for.in
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #0
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #0
+
+declare void @may_exit() nounwind
+
+define void @pr28012(i32 %n) {
+; CHECK-LABEL: Classifying expressions for: @pr28012
+; CHECK: Loop %loop: backedge-taken count is -1431655751
+; CHECK: Loop %loop: max backedge-taken count is -1431655751
+; CHECK: Loop %loop: Predicated backedge-taken count is -1431655751
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add nsw i32 %iv, 3
+  call void @may_exit()
+  %becond = icmp ne i32 %iv.inc, 46
+  br i1 %becond, label %loop, label %leave
+
+leave:
+  ret void
+}

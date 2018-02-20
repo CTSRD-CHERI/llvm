@@ -6,7 +6,7 @@ tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM MipsGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM MipsGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM MipsGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM MipsGenFastISel.inc -gen-fast-isel)
+#tablegen(LLVM MipsGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM MipsGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM MipsGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM MipsGenAsmMatcher.inc -gen-asm-matcher)
@@ -27,6 +27,7 @@ add_llvm_target(MipsCodeGen
   MipsConstantIslandPass.cpp
   MipsDelaySlotFiller.cpp
   MipsFastISel.cpp
+  MipsHazardSchedule.cpp
   MipsInstrInfo.cpp
   MipsISelDAGToDAG.cpp
   MipsISelLowering.cpp
@@ -38,6 +39,7 @@ add_llvm_target(MipsCodeGen
   MipsOptimizePICCall.cpp
   MipsOs16.cpp
   MipsRegisterInfo.cpp
+  MipsSelectionDAGInfo.cpp
   MipsSEFrameLowering.cpp
   MipsSEInstrInfo.cpp
   MipsSEISelDAGToDAG.cpp
@@ -46,13 +48,15 @@ add_llvm_target(MipsCodeGen
   MipsSubtarget.cpp
   MipsTargetMachine.cpp
   MipsTargetObjectFile.cpp
+  Cheri128FailHard.cpp
   CheriAddressingModeFolder.cpp
   CheriAddressingModeFolder.cpp
   CheriLoopPointerDecanonicalize.cpp
-  CheriMemOpLowering.cpp
   CheriStackInvalidatePass.cpp
   CheriRangeChecker.cpp
-  CheriSandboxABI.cpp
+  CheriPureCapABI.cpp
+  CheriExpandIntrinsicsPass.cpp
+  MicroMipsSizeReduction.cpp
   )
 
 add_subdirectory(InstPrinter)

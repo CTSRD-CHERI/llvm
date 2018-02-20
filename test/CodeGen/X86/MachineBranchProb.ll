@@ -17,10 +17,10 @@ for.cond2:                                        ; preds = %for.inc, %for.cond
   %cmp4 = icmp eq i32 %i.1, %v3
   %or.cond = or i1 %tobool, %cmp4
   br i1 %or.cond, label %for.inc20, label %for.inc, !prof !0
-; CHECK: BB#1: derived from LLVM BB %for.cond2
-; CHECK: Successors according to CFG: BB#3(56008718) BB#4(3615818718)
-; CHECK: BB#4: derived from LLVM BB %for.cond2
-; CHECK: Successors according to CFG: BB#3(56008718) BB#2(3559810000)
+; CHECK: bb.1.for.cond2:
+; CHECK: successors: %bb.3(0x01f3d4c5), %bb.4(0x7e0c2b3b)
+; CHECK: bb.4.for.cond2:
+; CHECK: successors: %bb.3(0x01fb92cf), %bb.2(0x7e046d31)
 
 for.inc:                                          ; preds = %for.cond2
   %shl = shl i32 %bit.0, 1

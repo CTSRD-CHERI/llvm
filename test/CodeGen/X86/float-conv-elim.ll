@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 -mcpu=x86-64 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64 < %s | FileCheck %s
 
 ; Make sure the float conversion is folded away as it should be.
 ; CHECK-LABEL: foo

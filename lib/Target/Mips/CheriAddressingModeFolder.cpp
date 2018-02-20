@@ -26,6 +26,9 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
   CheriAddressingModeFolder(MipsTargetMachine &TM) : MachineFunctionPass(ID) {
     InstrInfo = TM.getSubtargetImpl()->getInstrInfo();
   }
+
+  StringRef getPassName() const override { return "Cheri Addressing Mode Folder"; }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<MachineLoopInfo>();
@@ -134,10 +137,12 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
     std::set<MachineInstr *> GetPCCs;
     bool modified = false;
     for (auto &MBB : MF)
-      for (MachineInstr &I : MBB) {
-        int Op = I.getOpcode();
+      for (MachineBasicBlock::iterator I = MBB.begin(), IE = MBB.end();
+                     I != IE; ++I) {
+        MachineInstr &MI = *I;
+        int Op = MI.getOpcode();
         if (Op == Mips::CGetPCC) {
-          GetPCCs.insert(&I);
+          GetPCCs.insert(&MI);
           continue;
         }
         // Only look at cap-relative loads and stores
@@ -151,18 +156,21 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
               Op == Mips::LOADCAP || Op == Mips::STORECAP ||
               Op == Mips::CAPSTORE32 || Op == Mips::CAPSTORE64))
           continue;
-        int64_t offset = I.getOperand(2).getImm();
         // If the load is not currently at register-zero offset, we can't fix
         // it up to use relative addressing, but we may be able to modify it so
         // that it is...
-        if (I.getOperand(1).getReg() != Mips::ZERO_64) {
+        int64_t offset = MI.getOperand(2).getImm();
+        if (MI.getOperand(1).getReg() != Mips::ZERO_64) {
+          // Don't try to fold in things that have relocations yet
+          if (!MI.getOperand(2).isImm())
+            continue;
           MachineInstr *AddInst;
           // If the register offset is a simple constant, then try to move it
           // into the memory operation
-          if (tryToFoldAdd(Op, I.getOperand(1).getReg(), RI, AddInst, offset)) {
+          if (tryToFoldAdd(Op, MI.getOperand(1).getReg(), RI, AddInst, offset)) {
             Adds.insert(AddInst);
-            I.getOperand(1).setImm(offset);
-            I.getOperand(1).setReg(Mips::ZERO_64);
+            MI.getOperand(2).setImm(offset);
+            MI.getOperand(1).setReg(Mips::ZERO_64);
           } else
             continue;
         }
@@ -171,7 +179,10 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
         // If the capability is formed by incrementing an offset, then try to
         // pull that calculation into the memory operation.
 
-        MachineInstr *IncOffset = RI.getUniqueVRegDef(I.getOperand(3).getReg());
+        // If this is a frame index or other symbol, skip it.
+        if (!MI.getOperand(3).isReg())
+          continue;
+        MachineInstr *IncOffset = RI.getUniqueVRegDef(MI.getOperand(3).getReg());
         if (!IncOffset)
           continue;
         // If this is CFromPtr-relative load or store, then we may be able to
@@ -180,32 +191,85 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
           if ((Op == Mips::LOADCAP) || (Op == Mips::STORECAP))
             continue;
           if (IncOffset->getOperand(1).getReg() == Mips::C0)
-            C0Ops.emplace_back(&I, IncOffset);
+            C0Ops.emplace_back(&MI, IncOffset);
           continue;
         }
+
+        // If this is a CIncOffset with an immediate then try to fold it into
+        // the operation.
+        if (IncOffset->getOpcode() == Mips::CIncOffsetImm) {
+          uint64_t offsetImm = IncOffset->getOperand(2).getImm();
+          if (IsValidOffset(Op, offset + offsetImm)) {
+            IncOffset->getOperand(1).setIsKill(false);
+            MI.getOperand(3).setReg(IncOffset->getOperand(1).getReg());
+            MI.getOperand(2).setImm(offset + offsetImm);
+            Adds.insert(IncOffset);
+          }
+          continue;
+        }
+
         // Ignore ones that are not based on a CIncOffset op
         if (IncOffset->getOpcode() != Mips::CIncOffset)
           continue;
         assert(IncOffset);
 
-        MachineOperand Cap = IncOffset->getOperand(1);
-        MachineOperand Offset = IncOffset->getOperand(2);
+        MachineOperand& Cap = IncOffset->getOperand(1);
+        MachineOperand& Offset = IncOffset->getOperand(2);
         assert(Cap.isReg());
+        // If the IncOffset is in a different basic block we need to be more
+        // careful: The machine verifier currently complains because we
+        // kill vregs here that we use later
+        if (&MBB != IncOffset->getParent())
+          continue;
+
+        // We are going to use the CIncOffset's source capability at the
+        // load/store instruction, so first we need to check it has not been
+        // killed before the use
+        auto* TRI = RI.getTargetRegisterInfo();
+        bool CapKilled = false;
+        for (auto J = std::prev(I), JE = MachineBasicBlock::iterator(IncOffset);
+            J != JE; --J) {
+          if (J->modifiesRegister(Cap.getReg(), TRI) ||
+              J->killsRegister(Cap.getReg(), TRI)) {
+            CapKilled = true;
+            break;
+          }
+        }
+        if (CapKilled)
+          continue;
+
         MachineInstr *AddInst;
         // If the CIncOffset is of a daddi[u] then we can potentially replace
         // both by just folding the register and immediate offsets into the
-        // load / store.
-        if (tryToFoldAdd(Op, Offset.getReg(), RI, AddInst, offset)) {
-          // If we managed to pull the offset calculation entirely away, then
-          // just use the computed immediate
-          Adds.insert(AddInst);
-          I.getOperand(1).setReg(Mips::ZERO_64);
-          I.getOperand(2).setImm(offset);
+        // load / store. Don't try to fold in things that have relocations yet.
+        if (MI.getOperand(2).isImm()) {
+          int64_t offset = MI.getOperand(2).getImm();
+          if (tryToFoldAdd(Op, Offset.getReg(), RI, AddInst, offset)) {
+            // If we managed to pull the offset calculation entirely away, then
+            // just use the computed immediate
+            Adds.insert(AddInst);
+            MI.getOperand(1).setReg(Mips::ZERO_64);
+            MI.getOperand(2).setImm(offset);
+          } else
+            // If we didn't, then use the CIncOffset's register value as our
+            // offset
+            MI.getOperand(1).setReg(Offset.getReg());
         } else
-          // If we didn't, then use the CIncOffset's register value as our
-          // offset
-          I.getOperand(1).setReg(Offset.getReg());
-        I.getOperand(3).setReg(Cap.getReg());
+          // If it has a relocation, then use the CIncOffset's register value
+          // as our offset
+          MI.getOperand(1).setReg(Offset.getReg());
+        MI.getOperand(3).setReg(Cap.getReg());
+
+        // If we were using a unique vreg here it will probably have kill set to
+        // true, so if we retain this kill state the machine instr verifier will
+        // complain if there is any other instruction later on that uses the
+        // cap reg.
+        // XXXAR: is copying the kill state the capreg enough?
+        // Could there be some corner case where the capreg is killed before
+        // this CIncOffset?
+        MI.getOperand(3).setIsKill(Cap.isKill());
+        Cap.setIsKill(false);
+
         IncOffsets.insert(IncOffset);
         modified = true;
       }
@@ -229,30 +293,13 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
         }
       } else
         AddInst = nullptr;
-      auto InsertPoint = I.first;
       MachineBasicBlock *InsertBlock = I.first->getParent();
-      // If this is a load of a GOT offset and it's in a loop then we want to
-      // try to hoist it out of the loop.
-      if (Offset.isGlobal()) {
-        auto Loop = MLI.getLoopFor(InsertBlock);
-        if (Loop) {
-          auto *Preheader = Loop->getLoopPreheader();
-          // If all paths to this block go through the preheader then hoist.
-          // Note: It might be worth doing this recursively and pushing out of
-          // nested loops.
-          if (MDT.dominates(Preheader, InsertBlock))
-            if (MDT.dominates(Preheader->getFirstTerminator(), I.first)) {
-              InsertBlock = Preheader;
-              InsertPoint = InsertBlock->getFirstTerminator();
-            }
-        }
-      }
       auto FirstOperand = I.first->getOperand(0);
       unsigned FirstReg = FirstOperand.getReg();
-      BuildMI(*InsertBlock, InsertPoint, I.first->getDebugLoc(),
+      BuildMI(*InsertBlock, I.first, I.first->getDebugLoc(),
           InstrInfo->get(MipsOpForCHERIOp(I.first->getOpcode())))
         .addReg(FirstReg, getDefRegState(FirstOperand.isDef()))
-        .addReg(BaseReg).addOperand(Offset);
+        .addReg(BaseReg).add(Offset);
       I.first->eraseFromBundle();
       if (AddInst) {
         // If we've folded the base of the add into the load's immediate, then
@@ -270,6 +317,7 @@ struct CheriAddressingModeFolder : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (DisableAddressingModeFolder)
       return false;
+    InstrInfo = MF.getSubtarget<MipsSubtarget>().getInstrInfo();
     bool modified = false;
     MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
     MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
@@ -295,6 +343,6 @@ INITIALIZE_PASS_END(CheriAddressingModeFolder, "cheriaddrmodefolder",
 
 
 MachineFunctionPass *
-llvm::createCheriAddressingModeFolder(MipsTargetMachine &TM) {
-  return new CheriAddressingModeFolder(TM);
+llvm::createCheriAddressingModeFolder() {
+  return new CheriAddressingModeFolder();
 }

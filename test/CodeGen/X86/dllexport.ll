@@ -4,6 +4,12 @@
 ; RUN:    | FileCheck -check-prefix CHECK -check-prefix CHECK-GCC %s
 ; RUN: llc -mtriple i686-pc-cygwin %s -o - \
 ; RUN:    | FileCheck -check-prefix CHECK -check-prefix CHECK-GCC %s
+; RUN: llc -mtriple i386-pc-win32 < %s \
+; RUN:    | FileCheck -check-prefix NOTEXPORTED %s
+; RUN: llc -mtriple i386-pc-mingw32 < %s \
+; RUN:    | FileCheck -check-prefix NOTEXPORTED %s
+; RUN: llc -mtriple i686-pc-cygwin %s -o - \
+; RUN:    | FileCheck -check-prefix NOTEXPORTED %s
 
 ; CHECK: .text
 
@@ -21,7 +27,7 @@ define dllexport void @f2() unnamed_addr {
 	ret void
 }
 
-declare dllexport void @not_defined()
+declare dllexport void @notDefined()
 
 ; CHECK: .globl _stdfun@0
 define dllexport x86_stdcallcc void @stdfun() nounwind {
@@ -88,42 +94,44 @@ define weak_odr dllexport void @weak1() {
 ; CHECK: _weak_alias = _f1
 @weak_alias = weak_odr dllexport alias void(), void()* @f1
 
+; Verify items that should not be exported do not appear in the export table.
+; We use a separate check prefix to avoid confusion between -NOT and -SAME.
+; NOTEXPORTED: .section .drectve
+; NOTEXPORTED-NOT: notExported
+; NOTEXPORTED-NOT: notDefined
+
 ; CHECK: .section .drectve
-; CHECK-CL-NOT: not_exported
-; CHECK-CL: /EXPORT:_f1
-; CHECK-CL-SAME: /EXPORT:_f2
-; CHECK-CL-SAME: /EXPORT:_stdfun@0
-; CHECK-CL-SAME: /EXPORT:@fastfun@0
-; CHECK-CL-SAME: /EXPORT:_thisfun
-; CHECK-CL-SAME: /EXPORT:_lnk1
-; CHECK-CL-SAME: /EXPORT:_lnk2
-; CHECK-CL-SAME: /EXPORT:_weak1
-; CHECK-CL-SAME: /EXPORT:_Var1,DATA
-; CHECK-CL-SAME: /EXPORT:_Var2,DATA
-; CHECK-CL-SAME: /EXPORT:_Var3,DATA
-; CHECK-CL-SAME: /EXPORT:_WeakVar1,DATA
-; CHECK-CL-SAME: /EXPORT:_WeakVar2,DATA
-; CHECK-CL-SAME: /EXPORT:_alias
-; CHECK-CL-SAME: /EXPORT:_alias2
-; CHECK-CL-SAME: /EXPORT:_alias3
-; CHECK-CL-SAME: /EXPORT:_weak_alias"
-; CHECK-CL-NOT: not_exported
-; CHECK-GCC-NOT: not_exported
-; CHECK-GCC: -export:f1
-; CHECK-GCC-SAME: -export:f2
-; CHECK-GCC-SAME: -export:stdfun@0
-; CHECK-GCC-SAME: -export:@fastfun@0
-; CHECK-GCC-SAME: -export:thisfun
-; CHECK-GCC-SAME: -export:lnk1
-; CHECK-GCC-SAME: -export:lnk2
-; CHECK-GCC-SAME: -export:weak1
-; CHECK-GCC-SAME: -export:Var1,data
-; CHECK-GCC-SAME: -export:Var2,data
-; CHECK-GCC-SAME: -export:Var3,data
-; CHECK-GCC-SAME: -export:WeakVar1,data
-; CHECK-GCC-SAME: -export:WeakVar2,data
-; CHECK-GCC-SAME: -export:alias
-; CHECK-GCC-SAME: -export:alias2
-; CHECK-GCC-SAME: -export:alias3
-; CHECK-GCC-SAME: -export:weak_alias"
-; CHECK-GCC-NOT: not_exported
+; CHECK-CL: .ascii " /EXPORT:_f1"
+; CHECK-CL: .ascii " /EXPORT:_f2"
+; CHECK-CL: .ascii " /EXPORT:_stdfun@0"
+; CHECK-CL: .ascii " /EXPORT:@fastfun@0"
+; CHECK-CL: .ascii " /EXPORT:_thisfun"
+; CHECK-CL: .ascii " /EXPORT:_lnk1"
+; CHECK-CL: .ascii " /EXPORT:_lnk2"
+; CHECK-CL: .ascii " /EXPORT:_weak1"
+; CHECK-CL: .ascii " /EXPORT:_Var1,DATA"
+; CHECK-CL: .ascii " /EXPORT:_Var2,DATA"
+; CHECK-CL: .ascii " /EXPORT:_Var3,DATA"
+; CHECK-CL: .ascii " /EXPORT:_WeakVar1,DATA"
+; CHECK-CL: .ascii " /EXPORT:_WeakVar2,DATA"
+; CHECK-CL: .ascii " /EXPORT:_alias"
+; CHECK-CL: .ascii " /EXPORT:_alias2"
+; CHECK-CL: .ascii " /EXPORT:_alias3"
+; CHECK-CL: .ascii " /EXPORT:_weak_alias"
+; CHECK-GCC: .ascii " -export:f1"
+; CHECK-GCC: .ascii " -export:f2"
+; CHECK-GCC: .ascii " -export:stdfun@0"
+; CHECK-GCC: .ascii " -export:@fastfun@0"
+; CHECK-GCC: .ascii " -export:thisfun"
+; CHECK-GCC: .ascii " -export:lnk1"
+; CHECK-GCC: .ascii " -export:lnk2"
+; CHECK-GCC: .ascii " -export:weak1"
+; CHECK-GCC: .ascii " -export:Var1,data"
+; CHECK-GCC: .ascii " -export:Var2,data"
+; CHECK-GCC: .ascii " -export:Var3,data"
+; CHECK-GCC: .ascii " -export:WeakVar1,data"
+; CHECK-GCC: .ascii " -export:WeakVar2,data"
+; CHECK-GCC: .ascii " -export:alias"
+; CHECK-GCC: .ascii " -export:alias2"
+; CHECK-GCC: .ascii " -export:alias3"
+; CHECK-GCC: .ascii " -export:weak_alias"

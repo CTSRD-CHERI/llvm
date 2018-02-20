@@ -14,28 +14,25 @@
 
 #include "MipsSERegisterInfo.h"
 #include "Mips.h"
-#include "MipsAnalyzeImmediate.h"
 #include "MipsMachineFunction.h"
 #include "MipsSEInstrInfo.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetFrameLowering.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -43,7 +40,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-reg-info"
 
-MipsSERegisterInfo::MipsSERegisterInfo() : MipsRegisterInfo() {}
+MipsSERegisterInfo::MipsSERegisterInfo(unsigned HwMode) :
+  MipsRegisterInfo(HwMode) {}
 
 bool MipsSERegisterInfo::
 requiresRegisterScavenging(const MachineFunction &MF) const {
@@ -64,10 +62,11 @@ MipsSERegisterInfo::intRegClass(unsigned Size) const {
   return &Mips::GPR64RegClass;
 }
 
-/// Get the size of the offset supported by the given load/store.
+/// Get the size of the offset supported by the given load/store/inline asm.
 /// The result includes the effects of any scale factors applied to the
 /// instruction immediate.
-static inline unsigned getLoadStoreOffsetSizeInBits(const unsigned Opcode) {
+static inline unsigned getLoadStoreOffsetSizeInBits(const unsigned Opcode,
+                                                    MachineOperand MO) {
   switch (Opcode) {
   case Mips::CAPSTORE16:
   case Mips::CAPLOAD16:
@@ -97,6 +96,47 @@ static inline unsigned getLoadStoreOffsetSizeInBits(const unsigned Opcode) {
   case Mips::LD_D:
   case Mips::ST_D:
     return 10 + 3 /* scale factor */;
+  case Mips::LL:
+  case Mips::LL64:
+  case Mips::LLD:
+  case Mips::LLE:
+  case Mips::SC:
+  case Mips::SC64:
+  case Mips::SCD:
+  case Mips::SCE:
+    return 16;
+  case Mips::LLE_MM:
+  case Mips::LL_MM:
+  case Mips::SCE_MM:
+  case Mips::SC_MM:
+    return 12;
+  case Mips::LL64_R6:
+  case Mips::LL_R6:
+  case Mips::LLD_R6:
+  case Mips::SC64_R6:
+  case Mips::SCD_R6:
+  case Mips::SC_R6:
+    return 9;
+  case Mips::INLINEASM: {
+    unsigned ConstraintID = InlineAsm::getMemoryConstraintID(MO.getImm());
+    switch (ConstraintID) {
+    case InlineAsm::Constraint_ZC: {
+      const MipsSubtarget &Subtarget = MO.getParent()
+                                           ->getParent()
+                                           ->getParent()
+                                           ->getSubtarget<MipsSubtarget>();
+      if (Subtarget.inMicroMipsMode())
+        return 12;
+
+      if (Subtarget.hasMips32r6())
+        return 9;
+
+      return 16;
+    }
+    default:
+      return 16;
+    }
+  }
   default:
     return 16;
   }
@@ -142,7 +182,7 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
                                      RegScavenger *RS) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
 
   auto &TM = static_cast<const MipsTargetMachine &>(MF.getTarget());
@@ -150,7 +190,7 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   const MipsRegisterInfo *RegInfo =
     static_cast<const MipsRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   int MinCSFI = 0;
   int MaxCSFI = -1;
 
@@ -175,9 +215,9 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
       IsISRRegFI)
     FrameReg = ABI.GetStackPtr();
   else if (RegInfo->needsStackRealignment(MF)) {
-    if (MFI->hasVarSizedObjects() && !MFI->isFixedObjectIndex(FrameIndex))
+    if (MFI.hasVarSizedObjects() && !MFI.isFixedObjectIndex(FrameIndex))
       FrameReg = ABI.GetBasePtr();
-    else if (MFI->isFixedObjectIndex(FrameIndex))
+    else if (MFI.isFixedObjectIndex(FrameIndex))
       FrameReg = getFrameRegister(MF);
     else
       FrameReg = ABI.GetStackPtr();
@@ -193,9 +233,26 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   //   incoming argument, callee-saved register location or local variable.
   bool IsKill = false;
   int64_t Offset;
+  int RegOpNo = OpNo;
+  int ImmOpNo = OpNo + 1;
+  if (ABI.IsCheriPureCap()) {
+    RegOpNo = OpNo;
+    if ((MI.getOpcode() == Mips::CAPSTORE64) ||
+        (MI.getOpcode() == Mips::CAPSTORE32) ||
+        (MI.getOpcode() == Mips::STORECAP) ||
+        (MI.getOpcode() == Mips::CAPLOAD64) ||
+        (MI.getOpcode() == Mips::CAPLOAD32) ||
+        (MI.getOpcode() == Mips::LOADCAP)) {
+      ImmOpNo = 2;
+      RegOpNo = 3;
+    } else
+      assert(MI.getOpcode() == Mips::CIncOffset);
+  }
+
 
   Offset = SPOffset + (int64_t)StackSize;
-  Offset += MI.getOperand(OpNo + 1).getImm();
+  if (MI.getOperand(ImmOpNo).isImm())
+    Offset += MI.getOperand(ImmOpNo).getImm();
 
   DEBUG(errs() << "Offset     : " << Offset << "\n" << "<--------->\n");
 
@@ -203,35 +260,64 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
     // Make sure Offset fits within the field available.
     // For MSA instructions, this is a 10-bit signed immediate (scaled by
     // element size), otherwise it is a 16-bit signed immediate.
-    unsigned OffsetBitSize = getLoadStoreOffsetSizeInBits(MI.getOpcode());
+    unsigned OffsetBitSize =
+        getLoadStoreOffsetSizeInBits(MI.getOpcode(), MI.getOperand(OpNo - 1));
     unsigned OffsetAlign = getLoadStoreOffsetAlign(MI.getOpcode());
 
-    auto *STI = TM.getSubtargetImpl(*MF.getFunction());
+    auto *STI = TM.getSubtargetImpl(MF.getFunction());
     const MipsSEInstrInfo &TII = *static_cast<const MipsSEInstrInfo *>(
           STI->getInstrInfo());
-    if (STI->isCheri() && RS && RS->isScavengingFrameIndex(FrameIndex)) {
-      assert(isInt<16>(Offset) &&
-          "Emergency spill slot must be within 32K of the frame pointer!");
+    DebugLoc DL = II->getDebugLoc();
+
+    if (MI.getOpcode() == Mips::CIncOffset) {
+      MI.getOperand(1).ChangeToRegister(FrameReg, false);
+      // If this is an 11-bit offset, then replace the CIncOffset that takes a
+      // register with one that takes an immediate.
+      if (isInt<11>(Offset)) {
+        MI.setDesc(TII.get(Mips::CIncOffsetImm));
+        MI.getOperand(2).ChangeToImmediate(Offset);
+        return;
+      }
       MachineBasicBlock &MBB = *MI.getParent();
-      DebugLoc DL = II->getDebugLoc();
-      bool isN64 = static_cast<const MipsTargetMachine&>(
-          MF.getTarget()).getABI().IsN64();
-      unsigned ADDiu = isN64 ? Mips::DADDiu : Mips::ADDiu;
-      // Add the offset to the frame register
-      BuildMI(MBB, II, DL, TII.get(ADDiu), FrameReg)
-        .addReg(FrameReg).addImm(Offset);
-      // Subtract again after the load to reset it
-      if (MI.getOperand(0).getReg() != FrameReg)
-        BuildMI(MBB, (++II), DL, TII.get(ADDiu), FrameReg)
-          .addReg(FrameReg).addImm(-Offset);
-      Offset = 0;
+      unsigned Reg = TII.loadImmediate(Offset, MBB, II, DL, nullptr);
+      MI.getOperand(2).ChangeToRegister(Reg, false, false, true);
+      return;
+    }
+
+    if (ABI.IsCheriPureCap()) {
+      if (!isIntN(OffsetBitSize, Offset)) {
+        MachineBasicBlock &MBB = *MI.getParent();
+        // If we have an offset that needs to fit into a signed n-bit immediate
+        // (where n < 16) and doesn't, but does fit into 16-bits then use an ADDiu
+        bool isFrameReg = MI.getOperand(0).getReg() == FrameReg;
+        bool needsIncOffset = MI.getOperand(1).getReg() != Mips::ZERO_64;
+        const TargetRegisterClass *PtrRC =
+            ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
+        MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
+        unsigned Reg = TII.loadImmediate(Offset, MBB, II, DL, nullptr);
+        if (needsIncOffset) {
+          BuildMI(MBB, II, DL, TII.get(Mips::CIncOffset), FrameReg)
+              .addReg(FrameReg)
+              .addReg(Reg, isFrameReg ? RegState::Kill : 0);
+          if (!isFrameReg) {
+            unsigned NegReg = RegInfo.createVirtualRegister(PtrRC);
+            BuildMI(MBB, (++II), DL, TII.get(Mips::DSUBu), NegReg)
+              .addReg(Mips::ZERO_64)
+              .addReg(Reg, RegState::Kill);
+            BuildMI(MBB, II, DL, TII.get(Mips::CIncOffset), FrameReg)
+              .addReg(FrameReg)
+              .addReg(NegReg, RegState::Kill);
+          }
+        } else
+          MI.getOperand(1).ChangeToRegister(Reg, false, false, true);
+        Offset = 0;
+      }
     } else if (OffsetBitSize < 16 && isInt<16>(Offset) &&
         (!isIntN(OffsetBitSize, Offset) ||
          OffsetToAlignment(Offset, OffsetAlign) != 0)) {
       // If we have an offset that needs to fit into a signed n-bit immediate
       // (where n < 16) and doesn't, but does fit into 16-bits then use an ADDiu
       MachineBasicBlock &MBB = *MI.getParent();
-      DebugLoc DL = II->getDebugLoc();
       const TargetRegisterClass *PtrRC =
           ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
       MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
@@ -260,6 +346,6 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
     }
   }
 
-  MI.getOperand(OpNo).ChangeToRegister(FrameReg, false, false, IsKill);
-  MI.getOperand(OpNo + 1).ChangeToImmediate(Offset);
+  MI.getOperand(RegOpNo).ChangeToRegister(FrameReg, false, false, IsKill);
+  MI.getOperand(ImmOpNo).ChangeToImmediate(Offset);
 }

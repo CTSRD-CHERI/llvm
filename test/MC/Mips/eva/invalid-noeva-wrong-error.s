@@ -19,9 +19,9 @@
 # RUN: FileCheck %s < %t1
 
         .set noat
-        cachee    31, 255($7)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-        cachee    0, -256($4)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-        cachee    5, -140($4)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        cachee    31, 255($7)          # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
+        cachee    0, -256($4)          # CHECK: :[[@LINE]]:22: error: invalid operand for instruction
+        cachee    5, -140($4)          # CHECK: :[[@LINE]]:22: error: invalid operand for instruction
         lbe       $10,-256($25)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lbe       $13,255($15)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lbe       $11,146($14)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction

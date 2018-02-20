@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -aarch64-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=true | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-NOOPT
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -aarch64-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=false | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPT
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=generic -aarch64-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=true | FileCheck %s -check-prefix=GENERIC -check-prefix=GENERIC-NOOPT
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=generic -aarch64-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=false | FileCheck %s -check-prefix=GENERIC -check-prefix=GENERIC-OPT
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=apple -aarch64-enable-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=true | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-NOOPT
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=apple -aarch64-enable-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=false | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPT
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=generic -aarch64-enable-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=true | FileCheck %s -check-prefix=GENERIC -check-prefix=GENERIC-NOOPT
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=generic -aarch64-enable-simd-scalar=true -asm-verbose=false -disable-adv-copy-opt=false | FileCheck %s -check-prefix=GENERIC -check-prefix=GENERIC-OPT
 
 define <2 x i64> @bar(<2 x i64> %a, <2 x i64> %b) nounwind readnone {
 ; CHECK-LABEL: bar:
@@ -17,7 +17,7 @@ define <2 x i64> @bar(<2 x i64> %a, <2 x i64> %b) nounwind readnone {
 ; CHECK: fmov [[COPY_REG2:x[0-9]+]], d[[REG2]]
 ; CHECK-NOOPT: fmov d0, [[COPY_REG3]]
 ; CHECK-OPT-NOT: fmov
-; CHECK: ins.d v0[1], [[COPY_REG2]]
+; CHECK: mov.d v0[1], [[COPY_REG2]]
 ; CHECK-NEXT: ret
 ;
 ; GENERIC-LABEL: bar:
@@ -29,7 +29,7 @@ define <2 x i64> @bar(<2 x i64> %a, <2 x i64> %b) nounwind readnone {
 ; GENERIC: fmov [[COPY_REG2:x[0-9]+]], d[[REG2]]
 ; GENERIC-NOOPT: fmov d0, [[COPY_REG3]]
 ; GENERIC-OPT-NOT: fmov
-; GENERIC: ins v0.d[1], [[COPY_REG2]]
+; GENERIC: mov v0.d[1], [[COPY_REG2]]
 ; GENERIC-NEXT: ret
   %add = add <2 x i64> %a, %b
   %vgetq_lane = extractelement <2 x i64> %add, i32 0

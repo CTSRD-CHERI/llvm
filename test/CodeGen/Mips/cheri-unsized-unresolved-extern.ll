@@ -1,7 +1,8 @@
-; RUN: clang -cc1 -triple cheri-unknown-bsd -cheri-linker -target-abi sandbox -O2 -S -o - %s | FileCheck %s
+; REQUIRES: clang
+; RUN: %cheri_purecap_cc1 -O2 -S -o - %s | FileCheck %s
 ; ModuleID = 'ocsp_cl.i'
 target datalayout = "E-m:m-pf200:256:256-i8:8:32-i16:16:32-i64:64-n32:64-S128-A200"
-target triple = "cheri-unknown-bsd"
+target triple = "cheri-unknown-freebsd"
 
 %struct.ASN1_ITEM_st = type opaque
 
@@ -14,11 +15,11 @@ target triple = "cheri-unknown-bsd"
 define void @fn1() #0 {
 entry:
   ; Load the address of a
-  ; CHECK: ld	$2, %got_disp(a)($gp)
-  ; CHECK: cfromptr $c1, $c0, $2
+  ; CHECK: ld	$[[AADDR:[0-9]+]], %got_disp(a)($gp)
+  ; CHECK: cfromptr $c1, $c0, $[[AADDR]]
+  ; CHECK: ld	$[[FN2ADDR:([0-9]+|sp)]], %call16(fn2)($gp)
   ; Call fn2
-  ; CHECK: ld	$1, %call16(fn2)($gp)
-  ; CHECK: cgetpccsetoffset	$c12, $1
+  ; CHECK: cgetpccsetoffset	$c12, $[[FN2ADDR]]
   ; CHECK: cjalr	$c12, $c17
   tail call void @fn2(%struct.ASN1_ITEM_st addrspace(200)* @a) #2
   ret void
@@ -26,8 +27,8 @@ entry:
 
 declare void @fn2(%struct.ASN1_ITEM_st addrspace(200)*) #1
 
-attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cheri" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cheri" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 
 !llvm.ident = !{!0}

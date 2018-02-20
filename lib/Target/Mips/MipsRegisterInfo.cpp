@@ -1,4 +1,4 @@
-//===-- MipsRegisterInfo.cpp - MIPS Register Information -== --------------===//
+//===- MipsRegisterInfo.cpp - MIPS Register Information -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,30 +12,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsRegisterInfo.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "Mips.h"
-#include "MipsAnalyzeImmediate.h"
-#include "MipsInstrInfo.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetFrameLowering.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -54,7 +50,8 @@ Cheri8("cheri8", cl::NotHidden,
 #define GET_REGINFO_TARGET_DESC
 #include "MipsGenRegisterInfo.inc"
 
-MipsRegisterInfo::MipsRegisterInfo() : MipsGenRegisterInfo(Mips::RA) {}
+MipsRegisterInfo::MipsRegisterInfo(unsigned HwMode) :
+  MipsGenRegisterInfo(Mips::RA, 0, 0, 0, HwMode) {}
 
 unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
 
@@ -62,7 +59,20 @@ const TargetRegisterClass *
 MipsRegisterInfo::getPointerRegClass(const MachineFunction &MF,
                                      unsigned Kind) const {
   MipsABIInfo ABI = MF.getSubtarget<MipsSubtarget>().getABI();
-  return ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
+  MipsPtrClass PtrClassKind = static_cast<MipsPtrClass>(Kind);
+
+  switch (PtrClassKind) {
+  case MipsPtrClass::Default:
+    return ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
+  case MipsPtrClass::GPR16MM:
+    return &Mips::GPRMM16RegClass;
+  case MipsPtrClass::StackPointer:
+    return ABI.ArePtrs64bit() ? &Mips::SP64RegClass : &Mips::SP32RegClass;
+  case MipsPtrClass::GlobalPointer:
+    return ABI.ArePtrs64bit() ? &Mips::GP64RegClass : &Mips::GP32RegClass;
+  }
+
+  llvm_unreachable("Unknown pointer kind");
 }
 
 unsigned
@@ -94,8 +104,8 @@ MipsRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 const MCPhysReg *
 MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const MipsSubtarget &Subtarget = MF->getSubtarget<MipsSubtarget>();
-  const Function *F = MF->getFunction();
-  if (F->hasFnAttribute("interrupt")) {
+  const Function &F = MF->getFunction();
+  if (F.hasFnAttribute("interrupt")) {
     if (Subtarget.hasMips64())
       return Subtarget.hasMips64r6() ? CSR_Interrupt_64R6_SaveList
                                      : CSR_Interrupt_64_SaveList;
@@ -106,6 +116,9 @@ MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   if (Subtarget.isSingleFloat())
     return CSR_SingleFloatOnly_SaveList;
+
+  if (Subtarget.isABI_CheriPureCap())
+    return CSR_Cheri_Purecap_SaveList;
 
   if (Subtarget.isCheri())
     return CSR_N64_Cheri_SaveList;
@@ -132,6 +145,9 @@ MipsRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   if (Subtarget.isSingleFloat())
     return CSR_SingleFloatOnly_RegMask;
 
+  if (Subtarget.isABI_CheriPureCap())
+    return CSR_Cheri_Purecap_RegMask;
+
   if (Subtarget.isCheri())
     return CSR_N64_Cheri_RegMask;
 
@@ -157,11 +173,11 @@ const uint32_t *MipsRegisterInfo::getMips16RetHelperMask() {
 BitVector MipsRegisterInfo::
 getReservedRegs(const MachineFunction &MF) const {
   static const MCPhysReg ReservedGPR32[] = {
-    Mips::ZERO, Mips::K0, Mips::K1, Mips::SP
+    Mips::ZERO, Mips::K0, Mips::K1
   };
 
   static const MCPhysReg ReservedGPR64[] = {
-    Mips::ZERO_64, Mips::K0_64, Mips::K1_64, Mips::SP_64
+    Mips::ZERO_64, Mips::K0_64, Mips::K1_64
   };
 
   static const uint16_t ReservedCheriRegs[] = {
@@ -184,7 +200,8 @@ getReservedRegs(const MachineFunction &MF) const {
 
   BitVector Reserved(getNumRegs());
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
-  typedef TargetRegisterClass::const_iterator RegIter;
+
+  using RegIter = TargetRegisterClass::const_iterator;
 
   for (unsigned I = 0; I < array_lengthof(ReservedGPR32); ++I)
     Reserved.set(ReservedGPR32[I]);
@@ -198,6 +215,12 @@ getReservedRegs(const MachineFunction &MF) const {
 
   for (unsigned I = 0; I < array_lengthof(ReservedGPR64); ++I)
     Reserved.set(ReservedGPR64[I]);
+
+  // In the CHERI pure-capability ABI, $sp is just another temporary register.
+  if (!Subtarget.isABI_CheriPureCap()) {
+    Reserved.set(Mips::SP);
+    Reserved.set(Mips::SP_64);
+  }
 
   // For mno-abicalls, GP is a program invariant!
   if (!Subtarget.isABICalls()) {
@@ -220,15 +243,24 @@ getReservedRegs(const MachineFunction &MF) const {
   if (Subtarget.isCheri()) {
     for (unsigned I = 0; I < array_lengthof(ReservedCheriRegs); ++I)
       Reserved.set(ReservedCheriRegs[I]);
-    if (Subtarget.isABI_CheriSandbox())
-      Reserved.set(Mips::C11);
+    auto &ABI = Subtarget.getABI();
+    auto *FL =
+      static_cast<const MipsFrameLowering*>(Subtarget.getFrameLowering());
+    if (Subtarget.isABI_CheriPureCap()) {
+      Reserved.set(ABI.GetStackPtr());
+      if (FL->hasFP(MF))
+        Reserved.set(ABI.GetFramePtr());
+      if (FL->hasBP(MF))
+        Reserved.set(ABI.GetBasePtr());
+    }
     if (Cheri8)
       for (unsigned I = 0; I < array_lengthof(ReservedCheri8Regs); ++I)
         Reserved.set(ReservedCheri8Regs[I]);
     if (Cheri16)
       for (unsigned I = 0; I < array_lengthof(ReservedCheri16Regs); ++I)
         Reserved.set(ReservedCheri16Regs[I]);
-  }
+  } else
+    Reserved.set(Mips::C0);
 
   // Reserve FP if this function should have a dedicated frame pointer register.
   if (Subtarget.getFrameLowering()->hasFP(MF)) {
@@ -242,7 +274,7 @@ getReservedRegs(const MachineFunction &MF) const {
       // allocate variable-sized objects at runtime. This should test the
       // same conditions as MipsFrameLowering::hasBP().
       if (needsStackRealignment(MF) &&
-          MF.getFrameInfo()->hasVarSizedObjects()) {
+          MF.getFrameInfo().hasVarSizedObjects()) {
         Reserved.set(Mips::S7);
         Reserved.set(Mips::S7_64);
       }
@@ -276,7 +308,7 @@ getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(Mips::RA_64);
     Reserved.set(Mips::T0);
     Reserved.set(Mips::T1);
-    if (MF.getFunction()->hasFnAttribute("saveS2") || MipsFI->hasSaveS2())
+    if (MF.getFunction().hasFnAttribute("saveS2") || MipsFI->hasSaveS2())
       Reserved.set(Mips::S2);
   }
 
@@ -317,12 +349,14 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
         errs() << "<--------->\n" << MI);
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  uint64_t stackSize = MF.getFrameInfo()->getStackSize();
-  int64_t spOffset = MF.getFrameInfo()->getObjectOffset(FrameIndex);
+  uint64_t stackSize = MF.getFrameInfo().getStackSize();
+  int64_t spOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
   DEBUG(errs() << "FrameIndex : " << FrameIndex << "\n"
                << "spOffset   : " << spOffset << "\n"
-               << "stackSize  : " << stackSize << "\n");
+               << "stackSize  : " << stackSize << "\n"
+               << "alignment  : "
+               << MF.getFrameInfo().getObjectAlignment(FrameIndex) << "\n");
 
   eliminateFI(MI, FIOperandNum, FrameIndex, stackSize, spOffset, RS);
 }
@@ -331,14 +365,12 @@ unsigned MipsRegisterInfo::
 getFrameRegister(const MachineFunction &MF) const {
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
-  bool IsN64 =
-      static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI().IsN64();
+  auto &ABI = static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI();
 
   if (Subtarget.inMips16Mode())
     return TFI->hasFP(MF) ? Mips::S0 : Mips::SP;
   else
-    return TFI->hasFP(MF) ? (IsN64 ? Mips::FP_64 : Mips::FP) :
-                            (IsN64 ? Mips::SP_64 : Mips::SP);
+    return TFI->hasFP(MF) ? ABI.GetFramePtr() : ABI.GetStackPtr();
 }
 
 bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {

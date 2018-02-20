@@ -43,6 +43,10 @@ class CCIfOrigArgWasF128<CCAction A>
 class CCIfArgIsVarArg<CCAction A>
     : CCIf<"!static_cast<MipsCCState *>(&State)->IsCallOperandFixed(ValNo)", A>;
 
+/// Match if the return was a floating point vector.
+class CCIfOrigArgWasNotVectorFloat<CCAction A>
+    : CCIf<"!static_cast<MipsCCState *>(&State)"
+                "->WasOriginalRetVectorFloat(ValNo)", A>;
 
 /// Match if the special calling conv is the specified value.
 class CCIfSpecialCallingConv<string CC, CCAction A>
@@ -99,8 +103,10 @@ def RetCC_MipsO32 : CallingConv<[
   // Promote i1/i8/i16 return values to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
-  // i32 are returned in registers V0, V1, A0, A1
-  CCIfType<[i32], CCAssignToReg<[V0, V1, A0, A1]>>,
+  // i32 are returned in registers V0, V1, A0, A1, unless the original return
+  // type was a vector of floats.
+  CCIfOrigArgWasNotVectorFloat<CCIfType<[i32],
+                                        CCAssignToReg<[V0, V1, A0, A1]>>>,
 
   // f32 are returned in registers F0, F2
   CCIfType<[f32], CCAssignToReg<[F0, F2]>>,
@@ -163,12 +169,12 @@ def CC_MipsN : CallingConv<[
   // All stack parameter slots become 64-bit doublewords and are 8-byte aligned.
   CCIfType<[f32], CCAssignToStack<4, 8>>,
   CCIfType<[i64, f64], CCAssignToStack<8, 8>>,
-  CCIfType<[iFATPTR], CCAssignToReg<[C3, C4, C5, C6, C7, C8, C9, C10]>>,
-  CCIfType<[iFATPTR], CCDelegateTo<CC_MipsCheriCapOnStack>>
+  CCIfType<[iFATPTR64, iFATPTR128, iFATPTR256, iFATPTR512], CCAssignToReg<[C3, C4, C5, C6, C7, C8, C9, C10]>>,
+  CCIfType<[iFATPTR64, iFATPTR128, iFATPTR256, iFATPTR512], CCDelegateTo<CC_MipsCheriCapOnStack>>
 ]>;
 
 def CC_CHERI_CCall : CallingConv<[
-  CCIfType<[iFATPTR], CCAssignToReg<[C1, C2, C3, C4, C5, C6, C7, C8, C9, C10]>>,
+  CCIfType<[iFATPTR64, iFATPTR128, iFATPTR256, iFATPTR512], CCAssignToReg<[C1, C2, C3, C4, C5, C6, C7, C8, C9, C10]>>,
   CCIfType<[i64], CCAssignToReg<[V0_64]>>,
   CCDelegateTo<CC_MipsN>
 ]>;
@@ -193,14 +199,14 @@ def CC_MipsN_VarArg : CallingConv<[
   CCIfType<[i64, f64], CCAssignToStack<8, 8>>
 ]>;
 
-// In sandbox mode, all variadic arguments are passed on the stack.
-def CC_MipsCheriSandbox_VarArg : CallingConv<[
+// In purecap mode, all variadic arguments are passed on the stack.
+def CC_MipsCheriPureCap_VarArg : CallingConv<[
   // Promote i8/i16 arguments to i32.
   CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
   // All stack parameter slots become 64-bit doublewords and are 8-byte aligned.
   CCIfType<[f32], CCAssignToStack<4, 8>>,
   CCIfType<[i64, f64], CCAssignToStack<8, 8>>,
-  CCIfType<[iFATPTR], CCDelegateTo<CC_MipsCheriCapOnStack>>
+  CCIfType<[iFATPTR64, iFATPTR128, iFATPTR256, iFATPTR512], CCDelegateTo<CC_MipsCheriCapOnStack>>
 ]>;
 
 def RetCC_MipsN : CallingConv<[
@@ -234,49 +240,7 @@ def RetCC_MipsN : CallingConv<[
   // f64 are returned in registers D0, D2
   CCIfType<[f64], CCAssignToReg<[D0_64, D2_64]>>,
   // Capabilities are returned in C3
-  CCIfType<[iFATPTR], CCAssignToReg<[C3]>>
-]>;
-
-//===----------------------------------------------------------------------===//
-// Mips EABI Calling Convention
-//===----------------------------------------------------------------------===//
-
-def CC_MipsEABI : CallingConv<[
-  // Promote i8/i16 arguments to i32.
-  CCIfType<[i8, i16], CCPromoteToType<i32>>,
-
-  // Integer arguments are passed in integer registers.
-  CCIfType<[i32], CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3]>>,
-
-  // Single fp arguments are passed in pairs within 32-bit mode
-  CCIfType<[f32], CCIfSubtarget<"isSingleFloat()",
-                  CCAssignToReg<[F12, F13, F14, F15, F16, F17, F18, F19]>>>,
-
-  CCIfType<[f32], CCIfSubtargetNot<"isSingleFloat()",
-                  CCAssignToReg<[F12, F14, F16, F18]>>>,
-
-  // The first 4 double fp arguments are passed in single fp registers.
-  CCIfType<[f64], CCIfSubtargetNot<"isSingleFloat()",
-                  CCAssignToReg<[D6, D7, D8, D9]>>>,
-
-  // Integer values get stored in stack slots that are 4 bytes in
-  // size and 4-byte aligned.
-  CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
-
-  // Integer values get stored in stack slots that are 8 bytes in
-  // size and 8-byte aligned.
-  CCIfType<[f64], CCIfSubtargetNot<"isSingleFloat()", CCAssignToStack<8, 8>>>
-]>;
-
-def RetCC_MipsEABI : CallingConv<[
-  // i32 are returned in registers V0, V1
-  CCIfType<[i32], CCAssignToReg<[V0, V1]>>,
-
-  // f32 are returned in registers F0, F1
-  CCIfType<[f32], CCAssignToReg<[F0, F1]>>,
-
-  // f64 are returned in register D0
-  CCIfType<[f64], CCIfSubtargetNot<"isSingleFloat()", CCAssignToReg<[D0]>>>
+  CCIfType<[iFATPTR64, iFATPTR128, iFATPTR256, iFATPTR512], CCAssignToReg<[C3]>>
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -319,9 +283,9 @@ def CC_MipsN_FastCC : CallingConv<[
   // 8-byte aligned.
   CCIfType<[i64, f64], CCAssignToStack<8, 8>>,
 
-  CCIfType<[iFATPTR], CCAssignToReg<[C1, C2, C3, C4, C5, C6, C7, C8, C9, C10,
-                                     C11, C12, C13, C14, C15, C16]>>,
-  CCIfType<[iFATPTR], CCDelegateTo<CC_MipsCheriCapOnStack>>
+  CCIfType<[iFATPTR64, iFATPTR128, iFATPTR256, iFATPTR512], CCAssignToReg<[C1, C2, C3, C4, C5, C6, C7, C8, C9, C10,
+                                     C13, C14, C15, C16]>>,
+  CCIfType<[iFATPTR64, iFATPTR128, iFATPTR256, iFATPTR512], CCDelegateTo<CC_MipsCheriCapOnStack>>
 ]>;
 
 def CC_Mips_FastCC : CallingConv<[
@@ -355,7 +319,6 @@ def CC_Mips_FastCC : CallingConv<[
   // Stack parameter slots for i32 and f32 are 32-bit words and 4-byte aligned.
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
 
-  CCIfSubtarget<"isABI_EABI()", CCDelegateTo<CC_MipsEABI>>,
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FastCC>>,
   CCDelegateTo<CC_MipsN_FastCC>
 ]>;
@@ -365,7 +328,6 @@ def CC_Mips_FastCC : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def RetCC_Mips : CallingConv<[
-  CCIfSubtarget<"isABI_EABI()", CCDelegateTo<RetCC_MipsEABI>>,
   CCIfSubtarget<"isABI_N32()", CCDelegateTo<RetCC_MipsN>>,
   CCIfSubtarget<"isABI_N64()", CCDelegateTo<RetCC_MipsN>>,
   CCDelegateTo<RetCC_MipsO32>
@@ -409,20 +371,16 @@ def CC_Mips_FixedArg : CallingConv<[
 
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
 
-  // FIXME: There wasn't an EABI case in the original code and it seems unlikely
-  //        that it's the same as CC_MipsN
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
   CCDelegateTo<CC_MipsN>
 ]>;
 
 def CC_Mips_VarArg : CallingConv<[
-  // If this is the CHERI sandbox ABI then we need to pass everything on the
+  // If this is the CHERI purecap ABI then we need to pass everything on the
   // stack for variadic functions.
-  CCIfSubtarget<"isABI_CheriSandbox()", CCDelegateTo<CC_MipsCheriSandbox_VarArg>>,
+  CCIfSubtarget<"isABI_CheriPureCap()", CCDelegateTo<CC_MipsCheriPureCap_VarArg>>,
   CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
 
-  // FIXME: There wasn't an EABI case in the original code and it seems unlikely
-  //        that it's the same as CC_MipsN_VarArg
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
   CCDelegateTo<CC_MipsN_VarArg>
 ]>;
@@ -460,8 +418,11 @@ def CSR_N64 : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), RA_64, FP_64,
 
 def CSR_N64_Cheri : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), RA_64, FP_64,
                                    GP_64, (sequence "S%u_64", 7, 0),
-                                   (sequence "C%u", 24, 17))>;
+                                   (sequence "C%u", 23, 17))>;
 
+def CSR_Cheri_Purecap : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), RA_64, FP_64,
+                                   GP_64, (sequence "S%u_64", 7, 0),
+                                   (sequence "C%u", 25, 17))>;
 
 def CSR_Mips16RetHelper :
   CalleeSavedRegs<(add V0, V1, FP,

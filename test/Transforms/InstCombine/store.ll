@@ -20,6 +20,14 @@ define void @test2(i32* %P) {
 ; CHECK-NEXT: ret void
 }
 
+define void @store_at_gep_off_null(i64 %offset) {
+; CHECK-LABEL: @store_at_gep_off_null
+; CHECK: store i32 undef, i32* %ptr
+   %ptr = getelementptr i32, i32 *null, i64 %offset
+   store i32 24, i32* %ptr
+   ret void
+}
+
 ;; Simple sinking tests
 
 ; "if then else"
@@ -111,6 +119,119 @@ for.end:                                          ; preds = %for.cond
 ; CHECK: for.cond:
 ; CHECK-NEXT: phi i32 [ 42
 ; CHECK-NEXT: store i32 %storemerge, i32* %gi, align 4, !tbaa !0
+}
+
+define void @dse1(i32* %p) {
+; CHECK-LABEL: dse1
+; CHECK-NEXT: store
+; CHECK-NEXT: ret
+  store i32 0, i32* %p
+  store i32 0, i32* %p
+  ret void
+} 
+
+; Slightly subtle: if we're mixing atomic and non-atomic access to the
+; same location, then the contents of the location are undefined if there's
+; an actual race.  As such, we're free to pick either store under the 
+; assumption that we're not racing with any other thread.
+define void @dse2(i32* %p) {
+; CHECK-LABEL: dse2
+; CHECK-NEXT: store i32 0, i32* %p
+; CHECK-NEXT: ret
+  store atomic i32 0, i32* %p unordered, align 4
+  store i32 0, i32* %p
+  ret void
+} 
+
+define void @dse3(i32* %p) {
+; CHECK-LABEL: dse3
+; CHECK-NEXT: store atomic i32 0, i32* %p unordered, align 4
+; CHECK-NEXT: ret
+  store i32 0, i32* %p
+  store atomic i32 0, i32* %p unordered, align 4
+  ret void
+} 
+
+define void @dse4(i32* %p) {
+; CHECK-LABEL: dse4
+; CHECK-NEXT: store atomic i32 0, i32* %p unordered, align 4
+; CHECK-NEXT: ret
+  store atomic i32 0, i32* %p unordered, align 4
+  store atomic i32 0, i32* %p unordered, align 4
+  ret void
+} 
+
+; Implementation limit - could remove unordered store here, but
+; currently don't.
+define void @dse5(i32* %p) {
+; CHECK-LABEL: dse5
+; CHECK-NEXT: store
+; CHECK-NEXT: store
+; CHECK-NEXT: ret
+  store atomic i32 0, i32* %p unordered, align 4
+  store atomic i32 0, i32* %p seq_cst, align 4
+  ret void
+}
+
+define void @write_back1(i32* %p) {
+; CHECK-LABEL: write_back1
+; CHECK-NEXT: ret
+  %v = load i32, i32* %p
+  store i32 %v, i32* %p
+  ret void
+} 
+
+define void @write_back2(i32* %p) {
+; CHECK-LABEL: write_back2
+; CHECK-NEXT: ret
+  %v = load atomic i32, i32* %p unordered, align 4
+  store i32 %v, i32* %p
+  ret void
+} 
+
+define void @write_back3(i32* %p) {
+; CHECK-LABEL: write_back3
+; CHECK-NEXT: ret
+  %v = load i32, i32* %p
+  store atomic i32 %v, i32* %p unordered, align 4
+  ret void
+} 
+
+define void @write_back4(i32* %p) {
+; CHECK-LABEL: write_back4
+; CHECK-NEXT: ret
+  %v = load atomic i32, i32* %p unordered, align 4
+  store atomic i32 %v, i32* %p unordered, align 4
+  ret void
+} 
+
+; Can't remove store due to ordering side effect
+define void @write_back5(i32* %p) {
+; CHECK-LABEL: write_back5
+; CHECK-NEXT: load
+; CHECK-NEXT: store
+; CHECK-NEXT: ret
+  %v = load atomic i32, i32* %p unordered, align 4
+  store atomic i32 %v, i32* %p seq_cst, align 4
+  ret void
+}
+
+define void @write_back6(i32* %p) {
+; CHECK-LABEL: write_back6
+; CHECK-NEXT: load
+; CHECK-NEXT: ret
+  %v = load atomic i32, i32* %p seq_cst, align 4
+  store atomic i32 %v, i32* %p unordered, align 4
+  ret void
+}
+
+define void @write_back7(i32* %p) {
+; CHECK-LABEL: write_back7
+; CHECK-NEXT: load
+; CHECK-NEXT: ret
+  %v = load atomic volatile i32, i32* %p seq_cst, align 4
+  store atomic i32 %v, i32* %p unordered, align 4
+  ret void
 }
 
 !0 = !{!4, !4, i64 0}

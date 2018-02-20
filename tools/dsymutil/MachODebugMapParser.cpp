@@ -9,7 +9,7 @@
 
 #include "BinaryHolder.h"
 #include "DebugMap.h"
-#include "dsymutil.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -53,7 +53,7 @@ private:
   /// Owns the MemoryBuffer for the currently handled object file.
   BinaryHolder CurrentObjectHolder;
   /// Map of the currently processed object file symbol addresses.
-  StringMap<uint64_t> CurrentObjectAddresses;
+  StringMap<Optional<uint64_t>> CurrentObjectAddresses;
   /// Element of the debug map corresponfing to the current object file.
   DebugMapObject *CurrentDebugMapObject;
 
@@ -64,9 +64,12 @@ private:
   std::unique_ptr<DebugMap> parseOneBinary(const MachOObjectFile &MainBinary,
                                            StringRef BinaryPath);
 
-  void switchToNewDebugMapObject(StringRef Filename, sys::TimeValue Timestamp);
+  void
+  switchToNewDebugMapObject(StringRef Filename,
+                            sys::TimePoint<std::chrono::seconds> Timestamp);
   void resetParserState();
   uint64_t getMainBinarySymbolAddress(StringRef Name);
+  std::vector<StringRef> getMainBinarySymbolNames(uint64_t Value);
   void loadMainBinarySymbols(const MachOObjectFile &MainBinary);
   void loadCurrentObjectFileSymbols(const object::MachOObjectFile &Obj);
   void handleStabSymbolTableEntry(uint32_t StringIndex, uint8_t Type,
@@ -109,8 +112,8 @@ void MachODebugMapParser::resetParserState() {
 /// Create a new DebugMapObject. This function resets the state of the
 /// parser that was referring to the last object file and sets
 /// everything up to add symbols to the new one.
-void MachODebugMapParser::switchToNewDebugMapObject(StringRef Filename,
-                                                    sys::TimeValue Timestamp) {
+void MachODebugMapParser::switchToNewDebugMapObject(
+    StringRef Filename, sys::TimePoint<std::chrono::seconds> Timestamp) {
   resetParserState();
 
   SmallString<80> Path(PathPrefix);
@@ -131,13 +134,13 @@ void MachODebugMapParser::switchToNewDebugMapObject(StringRef Filename,
                    Err.message() + "\n");
   }
 
-  CurrentDebugMapObject = &Result->addDebugMapObject(Path, Timestamp);
+  CurrentDebugMapObject =
+      &Result->addDebugMapObject(Path, Timestamp, MachO::N_OSO);
   loadCurrentObjectFileSymbols(*ErrOrAchObj);
 }
 
 static std::string getArchName(const object::MachOObjectFile &Obj) {
-  Triple ThumbTriple;
-  Triple T = Obj.getArch(nullptr, &ThumbTriple);
+  Triple T = Obj.getArchTriple();
   return T.getArchName();
 }
 
@@ -145,8 +148,7 @@ std::unique_ptr<DebugMap>
 MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
                                     StringRef BinaryPath) {
   loadMainBinarySymbols(MainBinary);
-  Result =
-      make_unique<DebugMap>(BinaryHolder::getTriple(MainBinary), BinaryPath);
+  Result = make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath);
   MainBinaryStrings = MainBinary.getStringTableData();
   for (const SymbolRef &Symbol : MainBinary.symbols()) {
     const DataRefImpl &DRI = Symbol.getRawDataRefImpl();
@@ -286,16 +288,17 @@ void MachODebugMapParser::dumpOneBinaryStab(const MachOObjectFile &MainBinary,
 }
 
 static bool shouldLinkArch(SmallVectorImpl<StringRef> &Archs, StringRef Arch) {
-  if (Archs.empty() ||
-      std::find(Archs.begin(), Archs.end(), "all") != Archs.end() ||
-      std::find(Archs.begin(), Archs.end(), "*") != Archs.end())
+  if (Archs.empty() || is_contained(Archs, "all") || is_contained(Archs, "*"))
     return true;
 
-  if (Arch.startswith("arm") && Arch != "arm64" &&
-      std::find(Archs.begin(), Archs.end(), "arm") != Archs.end())
+  if (Arch.startswith("arm") && Arch != "arm64" && is_contained(Archs, "arm"))
     return true;
 
-  return std::find(Archs.begin(), Archs.end(), Arch) != Archs.end();
+  SmallString<16> ArchName = Arch;
+  if (Arch.startswith("thumb"))
+    ArchName = ("arm" + Arch.substr(5)).str();
+
+  return is_contained(Archs, ArchName);
 }
 
 bool MachODebugMapParser::dumpStab() {
@@ -307,9 +310,8 @@ bool MachODebugMapParser::dumpStab() {
     return false;
   }
 
-  Triple T;
   for (const auto *Binary : *MainBinOrError)
-    if (shouldLinkArch(Archs, Binary->getArch(nullptr, &T).getArchName()))
+    if (shouldLinkArch(Archs, Binary->getArchTriple().getArchName()))
       dumpOneBinaryStab(*Binary, BinaryPath);
 
   return true;
@@ -325,9 +327,8 @@ ErrorOr<std::vector<std::unique_ptr<DebugMap>>> MachODebugMapParser::parse() {
     return Error;
 
   std::vector<std::unique_ptr<DebugMap>> Results;
-  Triple T;
   for (const auto *Binary : *MainBinOrError)
-    if (shouldLinkArch(Archs, Binary->getArch(nullptr, &T).getArchName()))
+    if (shouldLinkArch(Archs, Binary->getArchTriple().getArchName()))
       Results.push_back(parseOneBinary(*Binary, BinaryPath));
 
   return std::move(Results);
@@ -345,10 +346,14 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   const char *Name = &MainBinaryStrings.data()[StringIndex];
 
   // An N_OSO entry represents the start of a new object file description.
-  if (Type == MachO::N_OSO) {
-    sys::TimeValue Timestamp;
-    Timestamp.fromEpochTime(Value);
-    return switchToNewDebugMapObject(Name, Timestamp);
+  if (Type == MachO::N_OSO)
+    return switchToNewDebugMapObject(Name, sys::toTimePoint(Value));
+
+  if (Type == MachO::N_AST) {
+    SmallString<80> Path(PathPrefix);
+    sys::path::append(Path, Name);
+    Result->addDebugMapObject(Path, sys::toTimePoint(Value), Type);
+    return;
   }
 
   // If the last N_OSO object file wasn't found,
@@ -385,9 +390,21 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   }
 
   auto ObjectSymIt = CurrentObjectAddresses.find(Name);
+
+  // If the name of a (non-static) symbol is not in the current object, we
+  // check all its aliases from the main binary.
+  if (ObjectSymIt == CurrentObjectAddresses.end() && Type != MachO::N_STSYM) {
+    for (const auto &Alias : getMainBinarySymbolNames(Value)) {
+      ObjectSymIt = CurrentObjectAddresses.find(Alias);
+      if (ObjectSymIt != CurrentObjectAddresses.end())
+        break;
+    }
+  }
+
   if (ObjectSymIt == CurrentObjectAddresses.end())
     return Warning("could not find object file symbol for symbol " +
                    Twine(Name));
+
   if (!CurrentDebugMapObject->addSymbol(Name, ObjectSymIt->getValue(), Value,
                                         Size))
     return Warning(Twine("failed to insert symbol '") + Name +
@@ -401,10 +418,24 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
 
   for (auto Sym : Obj.symbols()) {
     uint64_t Addr = Sym.getValue();
-    ErrorOr<StringRef> Name = Sym.getName();
-    if (!Name)
+    Expected<StringRef> Name = Sym.getName();
+    if (!Name) {
+      // TODO: Actually report errors helpfully.
+      consumeError(Name.takeError());
       continue;
-    CurrentObjectAddresses[*Name] = Addr;
+    }
+    // The value of some categories of symbols isn't meaningful. For
+    // example common symbols store their size in the value field, not
+    // their address. Absolute symbols have a fixed address that can
+    // conflict with standard symbols. These symbols (especially the
+    // common ones), might still be referenced by relocations. These
+    // relocations will use the symbol itself, and won't need an
+    // object file address. The object file address field is optional
+    // in the DebugMap, leave it unassigned for these symbols.
+    if (Sym.getFlags() & (SymbolRef::SF_Absolute | SymbolRef::SF_Common))
+      CurrentObjectAddresses[*Name] = None;
+    else
+      CurrentObjectAddresses[*Name] = Addr;
   }
 }
 
@@ -418,6 +449,17 @@ uint64_t MachODebugMapParser::getMainBinarySymbolAddress(StringRef Name) {
   return Sym->second;
 }
 
+/// Get all symbol names in the main binary for the given value.
+std::vector<StringRef>
+MachODebugMapParser::getMainBinarySymbolNames(uint64_t Value) {
+  std::vector<StringRef> Names;
+  for (const auto &Entry : MainBinarySymbolAddresses) {
+    if (Entry.second == Value)
+      Names.push_back(Entry.first());
+  }
+  return Names;
+}
+
 /// Load the interesting main binary symbols' addresses into
 /// MainBinarySymbolAddresses.
 void MachODebugMapParser::loadMainBinarySymbols(
@@ -425,26 +467,40 @@ void MachODebugMapParser::loadMainBinarySymbols(
   section_iterator Section = MainBinary.section_end();
   MainBinarySymbolAddresses.clear();
   for (const auto &Sym : MainBinary.symbols()) {
-    SymbolRef::Type Type = Sym.getType();
+    Expected<SymbolRef::Type> TypeOrErr = Sym.getType();
+    if (!TypeOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(TypeOrErr.takeError());
+      continue;
+    }
+    SymbolRef::Type Type = *TypeOrErr;
     // Skip undefined and STAB entries.
-    if ((Type & SymbolRef::ST_Debug) || (Type & SymbolRef::ST_Unknown))
+    if ((Type == SymbolRef::ST_Debug) || (Type == SymbolRef::ST_Unknown))
       continue;
     // The only symbols of interest are the global variables. These
     // are the only ones that need to be queried because the address
     // of common data won't be described in the debug map. All other
     // addresses should be fetched for the debug map.
-    if (!(Sym.getFlags() & SymbolRef::SF_Global))
+    uint8_t SymType =
+        MainBinary.getSymbolTableEntry(Sym.getRawDataRefImpl()).n_type;
+    if (!(SymType & (MachO::N_EXT | MachO::N_PEXT)))
       continue;
-    ErrorOr<section_iterator> SectionOrErr = Sym.getSection();
-    if (!SectionOrErr)
+    Expected<section_iterator> SectionOrErr = Sym.getSection();
+    if (!SectionOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(SectionOrErr.takeError());
       continue;
+    }
     Section = *SectionOrErr;
     if (Section == MainBinary.section_end() || Section->isText())
       continue;
     uint64_t Addr = Sym.getValue();
-    ErrorOr<StringRef> NameOrErr = Sym.getName();
-    if (!NameOrErr)
+    Expected<StringRef> NameOrErr = Sym.getName();
+    if (!NameOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(NameOrErr.takeError());
       continue;
+    }
     StringRef Name = *NameOrErr;
     if (Name.size() == 0 || Name[0] == '\0')
       continue;

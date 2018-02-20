@@ -1,7 +1,7 @@
-; RUN: llc < %s -emulated-tls -march=x86 -mtriple=i386-linux-gnu | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64 %s
-; RUN: llc < %s -emulated-tls -march=x86 -mtriple=x86-linux-android | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mtriple=x86_64-linux-android | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -emulated-tls -mtriple=i386-linux-gnu | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -emulated-tls -mtriple=i386-linux-android | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-android | FileCheck -check-prefix=X64 %s
 
 ; Copied from tls.ll; emulated TLS model is not implemented
 ; for *-pc-win32 and *-pc-winows targets yet.
@@ -21,7 +21,7 @@ define i32 @my_get_xyz() {
 ; X64:         movl $my_emutls_v_xyz, %edi
 ; X64-NEXT:    callq my_emutls_get_address
 ; X64-NEXT:    movl (%rax), %eax
-; X64-NEXT:    popq %rdx
+; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 
 entry:
@@ -50,7 +50,7 @@ define i32 @f1() {
 ; X64:         movl $__emutls_v.i1, %edi
 ; X64-NEXT:    callq __emutls_get_address
 ; X64-NEXT:    movl (%rax), %eax
-; X64-NEXT:    popq %rdx
+; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 
 entry:
@@ -67,7 +67,7 @@ define i32* @f2() {
 ; X64-LABEL: f2:
 ; X64:         movl $__emutls_v.i1, %edi
 ; X64-NEXT:    callq __emutls_get_address
-; X64-NEXT:    popq %rdx
+; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 
 entry:

@@ -1,10 +1,10 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -code-model=large %s \
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -large-code-model %s \
 // RUN:   -o - | llvm-readobj -s -sd | FileCheck %s
 
 // CHECK:      Section {
 // CHECK:        Index: 
 // CHECK:        Name: .eh_frame
-// CHECK-NEXT:   Type: SHT_PROGBITS
+// CHECK-NEXT:   Type: SHT_X86_64_UNWIND
 // CHECK-NEXT:   Flags [
 // CHECK-NEXT:     SHF_ALLOC
 // CHECK-NEXT:   ]

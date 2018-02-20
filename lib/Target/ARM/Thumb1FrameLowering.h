@@ -1,4 +1,4 @@
-//===-- Thumb1FrameLowering.h - Thumb1-specific frame info stuff --*- C++ -*-=//
+//===- Thumb1FrameLowering.h - Thumb1-specific frame info stuff ---*- C++ -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,20 +6,16 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-//
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_ARM_THUMB1FRAMELOWERING_H
 #define LLVM_LIB_TARGET_ARM_THUMB1FRAMELOWERING_H
 
 #include "ARMFrameLowering.h"
-#include "Thumb1InstrInfo.h"
-#include "ThumbRegisterInfo.h"
-#include "llvm/Target/TargetFrameLowering.h"
 
 namespace llvm {
+
+class ARMSubtarget;
+class MachineFunction;
 
 class Thumb1FrameLowering : public ARMFrameLowering {
 public:
@@ -36,12 +32,12 @@ public:
                                  const TargetRegisterInfo *TRI) const override;
   bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MI,
-                                  const std::vector<CalleeSavedInfo> &CSI,
+                                  std::vector<CalleeSavedInfo> &CSI,
                                   const TargetRegisterInfo *TRI) const override;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
-  void
+  MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,
                                 MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
@@ -52,6 +48,11 @@ public:
   /// This method is used by the shrink-wrapping pass to decide if
   /// \p MBB will be correctly handled by the target.
   bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
+
+  /// Disable shrink wrap as tBfar/BL will be used to adjust for long jumps.
+  bool enableShrinkWrapping(const MachineFunction &MF) const override {
+    return false;
+  }
 
 private:
   /// Check if the frame lowering of \p MF needs a special fixup
@@ -83,6 +84,6 @@ private:
   bool emitPopSpecialFixUp(MachineBasicBlock &MBB, bool DoIt) const;
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_THUMB1FRAMELOWERING_H

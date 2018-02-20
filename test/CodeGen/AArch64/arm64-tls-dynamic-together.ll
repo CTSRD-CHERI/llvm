@@ -1,6 +1,6 @@
-; RUN: llc -O0 -mtriple=arm64-none-linux-gnu -relocation-model=pic \
+; RUN: llc -O0 -fast-isel -mtriple=arm64-none-linux-gnu -relocation-model=pic \
 ; RUN:     -verify-machineinstrs < %s | FileCheck -check-prefix=CHECK -check-prefix=NOEMU %s
-; RUN: llc -emulated-tls -O0 -mtriple=arm64-none-linux-gnu -relocation-model=pic \
+; RUN: llc -emulated-tls -O0 -fast-isel -mtriple=arm64-none-linux-gnu -relocation-model=pic \
 ; RUN:     -verify-machineinstrs < %s | FileCheck -check-prefix=CHECK -check-prefix=EMU %s
 
 ; If the .tlsdesccall and blr parts are emitted completely separately (even with
@@ -40,7 +40,7 @@ define i32 @test_emulated_init() {
 
 ; EMU-NOT: __emutls_v.general_dynamic_var:
 
-; EMU:      .align 3
+; EMU:      .p2align 3
 ; EMU-LABEL: __emutls_v.emulated_init_var:
 ; EMU-NEXT: .xword 4
 ; EMU-NEXT: .xword 8

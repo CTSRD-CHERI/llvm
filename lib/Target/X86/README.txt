@@ -50,8 +50,8 @@ Some isel ideas:
 2. Code duplication (addressing mode) during isel.
 3. Other ideas from "Register-Sensitive Selection, Duplication, and
    Sequencing of Instructions".
-4. Scheduling for reduced register pressure.  E.g. "Minimum Register 
-   Instruction Sequence Problem: Revisiting Optimal Code Generation for DAGs" 
+4. Scheduling for reduced register pressure.  E.g. "Minimum Register
+   Instruction Sequence Problem: Revisiting Optimal Code Generation for DAGs"
    and other related papers.
    http://citeseer.ist.psu.edu/govindarajan01minimum.html
 
@@ -73,7 +73,7 @@ It appears icc use push for parameter passing. Need to investigate.
 //===---------------------------------------------------------------------===//
 
 The instruction selector sometimes misses folding a load into a compare.  The
-pattern is written as (cmp reg, (load p)).  Because the compare isn't 
+pattern is written as (cmp reg, (load p)).  Because the compare isn't
 commutative, it is not matched with the load on both sides.  The dag combiner
 should be made smart enough to canonicalize the load into the RHS of a compare
 when it can invert the result of the compare for free.
@@ -987,11 +987,11 @@ bb7:		; preds = %entry
 to:
 
 foo:                                    # @foo
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	movl	4(%esp), %ecx
 	cmpb	$0, 16(%esp)
 	je	.LBB0_2
-# BB#1:                                 # %bb
+# %bb.1:                                # %bb
 	movl	8(%esp), %eax
 	addl	%ecx, %eax
 	ret
@@ -1073,7 +1073,7 @@ declare void @exit(i32) noreturn nounwind
 
 This compiles into:
 _abort_gzip:                            ## @abort_gzip
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	subl	$12, %esp
 	movb	_in_exit.4870.b, %al
 	cmpb	$1, %al
@@ -1396,7 +1396,7 @@ define i32 @bar(%struct.B* nocapture %a) nounwind readonly optsize {
 }
 
 bar:                                    # @bar
-# BB#0:
+# %bb.0:
         movb    (%rdi), %al
         andb    $1, %al
         movzbl  %al, %eax
@@ -1633,7 +1633,7 @@ In the real code, we get a lot more wrong than this.  However, even in this
 code we generate:
 
 _foo:                                   ## @foo
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	movb	(%rsi), %al
 	movb	(%rdi), %cl
 	cmpb	%al, %cl
@@ -1646,12 +1646,12 @@ LBB0_2:                                 ## %if.end
 	movb	1(%rdi), %cl
 	cmpb	%al, %cl
 	jne	LBB0_1
-## BB#3:                                ## %if.end38
+## %bb.3:                               ## %if.end38
 	movb	2(%rsi), %al
 	movb	2(%rdi), %cl
 	cmpb	%al, %cl
 	jne	LBB0_1
-## BB#4:                                ## %if.end60
+## %bb.4:                               ## %if.end60
 	movb	3(%rdi), %al
 	cmpb	3(%rsi), %al
 LBB0_5:                                 ## %if.end60

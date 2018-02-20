@@ -14,8 +14,8 @@
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x44
-// CHECK-NEXT:     Size: 61
+// CHECK-NEXT:     Offset:
+// CHECK-NEXT:     Size: 62
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
 // CHECK-NEXT:     AddressAlignment: 1

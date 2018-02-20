@@ -18,7 +18,7 @@ EOF
 
 // RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/submodules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
-// RUN:     | llvm-dwarfdump --debug-dump=info - | FileCheck %s
+// RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
 
 // ---------------------------------------------------------------------
 #ifdef CHILD_H
@@ -42,8 +42,6 @@ struct PruneMeNot;
 // CHECK:            DW_TAG_compile_unit
 // CHECK:              DW_TAG_module
 // CHECK-NEXT:           DW_AT_name{{.*}}"Parent"
-// CHECK:              DW_TAG_module
-// CHECK-NEXT:           DW_AT_name{{.*}}"Child"
 // CHECK: 0x0[[EMPTY:.*]]: DW_TAG_module
 // CHECK-NEXT:             DW_AT_name{{.*}}"Empty"
 

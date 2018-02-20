@@ -174,51 +174,51 @@ declare void @g.f1()
 ;                   [unnamed_addr] alias <AliaseeTy> @<Aliasee>
 
 ; Aliases -- Linkage
-@a.private = private alias i32, i32* @g.private
+@a.private = private alias i32* @g.private
 ; CHECK: @a.private = private alias i32, i32* @g.private
-@a.internal = internal alias i32, i32* @g.internal
+@a.internal = internal alias i32* @g.internal
 ; CHECK: @a.internal = internal alias i32, i32* @g.internal
-@a.linkonce = linkonce alias i32, i32* @g.linkonce
+@a.linkonce = linkonce alias i32* @g.linkonce
 ; CHECK: @a.linkonce = linkonce alias i32, i32* @g.linkonce
-@a.weak = weak alias i32, i32* @g.weak
+@a.weak = weak alias i32* @g.weak
 ; CHECK: @a.weak = weak alias i32, i32* @g.weak
-@a.linkonce_odr = linkonce_odr alias i32, i32* @g.linkonce_odr
+@a.linkonce_odr = linkonce_odr alias i32* @g.linkonce_odr
 ; CHECK: @a.linkonce_odr = linkonce_odr alias i32, i32* @g.linkonce_odr
-@a.weak_odr = weak_odr alias i32, i32* @g.weak_odr
+@a.weak_odr = weak_odr alias i32* @g.weak_odr
 ; CHECK: @a.weak_odr = weak_odr alias i32, i32* @g.weak_odr
-@a.external = external alias i32, i32* @g1
+@a.external = external alias i32* @g1
 ; CHECK: @a.external = alias i32, i32* @g1
 
 ; Aliases -- Visibility
-@a.default = default alias i32, i32* @g.default
+@a.default = default alias i32* @g.default
 ; CHECK: @a.default = alias i32, i32* @g.default
-@a.hidden = hidden alias i32, i32* @g.hidden
+@a.hidden = hidden alias i32* @g.hidden
 ; CHECK: @a.hidden = hidden alias i32, i32* @g.hidden
-@a.protected = protected alias i32, i32* @g.protected
+@a.protected = protected alias i32* @g.protected
 ; CHECK: @a.protected = protected alias i32, i32* @g.protected
 
 ; Aliases -- DLLStorageClass
-@a.dlldefault = default alias i32, i32* @g.dlldefault
+@a.dlldefault = default alias i32* @g.dlldefault
 ; CHECK: @a.dlldefault = alias i32, i32* @g.dlldefault
-@a.dllimport = dllimport alias i32, i32* @g1
+@a.dllimport = dllimport alias i32* @g1
 ; CHECK: @a.dllimport = dllimport alias i32, i32* @g1
-@a.dllexport = dllexport alias i32, i32* @g.dllexport
+@a.dllexport = dllexport alias i32* @g.dllexport
 ; CHECK: @a.dllexport = dllexport alias i32, i32* @g.dllexport
 
 ; Aliases -- ThreadLocal
-@a.notthreadlocal = alias i32, i32* @g.notthreadlocal
+@a.notthreadlocal = alias i32* @g.notthreadlocal
 ; CHECK: @a.notthreadlocal = alias i32, i32* @g.notthreadlocal
-@a.generaldynamic = thread_local alias i32, i32* @g.generaldynamic
+@a.generaldynamic = thread_local alias i32* @g.generaldynamic
 ; CHECK: @a.generaldynamic = thread_local alias i32, i32* @g.generaldynamic
-@a.localdynamic = thread_local(localdynamic) alias i32, i32* @g.localdynamic
+@a.localdynamic = thread_local(localdynamic) alias i32* @g.localdynamic
 ; CHECK: @a.localdynamic = thread_local(localdynamic) alias i32, i32* @g.localdynamic
-@a.initialexec = thread_local(initialexec) alias i32, i32* @g.initialexec
+@a.initialexec = thread_local(initialexec) alias i32* @g.initialexec
 ; CHECK: @a.initialexec = thread_local(initialexec) alias i32, i32* @g.initialexec
-@a.localexec = thread_local(localexec) alias i32, i32* @g.localexec
+@a.localexec = thread_local(localexec) alias i32* @g.localexec
 ; CHECK: @a.localexec = thread_local(localexec) alias i32, i32* @g.localexec
 
 ; Aliases -- unnamed_addr
-@a.unnamed_addr = unnamed_addr alias i32, i32* @g.unnamed_addr
+@a.unnamed_addr = unnamed_addr alias i32* @g.unnamed_addr
 ; CHECK: @a.unnamed_addr = unnamed_addr alias i32, i32* @g.unnamed_addr
 
 ;; Functions
@@ -368,15 +368,15 @@ declare cc78 void @f.cc78()
 declare x86_64_sysvcc void @f.x86_64_sysvcc()
 ; CHECK: declare x86_64_sysvcc void @f.x86_64_sysvcc()
 declare cc79 void @f.cc79()
-; CHECK: declare x86_64_win64cc void @f.cc79()
-declare x86_64_win64cc void @f.x86_64_win64cc()
-; CHECK: declare x86_64_win64cc void @f.x86_64_win64cc()
+; CHECK: declare win64cc void @f.cc79()
+declare win64cc void @f.x86_64_win64cc()
+; CHECK: declare win64cc void @f.x86_64_win64cc()
 declare cc80 void @f.cc80()
 ; CHECK: declare x86_vectorcallcc void @f.cc80()
 declare x86_vectorcallcc void @f.x86_vectorcallcc()
 ; CHECK: declare x86_vectorcallcc void @f.x86_vectorcallcc()
-declare cc8191 void @f.cc8191()
-; CHECK: declare cc8191 void @f.cc8191()
+declare cc1023 void @f.cc1023()
+; CHECK: declare cc1023 void @f.cc1023()
 
 ; Functions -- ret attrs (Return attributes)
 declare zeroext i64 @f.zeroext()
@@ -596,8 +596,8 @@ define void @atomics(i32* %word) {
   ; CHECK: %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
   %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
   ; CHECK: %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
-  %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 singlethread seq_cst monotonic
-  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 singlethread seq_cst monotonic
+  %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
+  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
   %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
   ; CHECK: %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
   %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic
@@ -616,32 +616,32 @@ define void @atomics(i32* %word) {
   ; CHECK: %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic
   %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
   ; CHECK: %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
-  %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 singlethread monotonic
-  ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 singlethread monotonic
-  %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 singlethread monotonic
-  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 singlethread monotonic
+  %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
+  %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
   fence acquire
   ; CHECK: fence acquire
   fence release
   ; CHECK: fence release
   fence acq_rel
   ; CHECK: fence acq_rel
-  fence singlethread seq_cst
-  ; CHECK: fence singlethread seq_cst
+  fence syncscope("singlethread") seq_cst
+  ; CHECK: fence syncscope("singlethread") seq_cst
 
   %ld.1 = load atomic i32, i32* %word monotonic, align 4
   ; CHECK: %ld.1 = load atomic i32, i32* %word monotonic, align 4
   %ld.2 = load atomic volatile i32, i32* %word acquire, align 8
   ; CHECK: %ld.2 = load atomic volatile i32, i32* %word acquire, align 8
-  %ld.3 = load atomic volatile i32, i32* %word singlethread seq_cst, align 16
-  ; CHECK: %ld.3 = load atomic volatile i32, i32* %word singlethread seq_cst, align 16
+  %ld.3 = load atomic volatile i32, i32* %word syncscope("singlethread") seq_cst, align 16
+  ; CHECK: %ld.3 = load atomic volatile i32, i32* %word syncscope("singlethread") seq_cst, align 16
 
   store atomic i32 23, i32* %word monotonic, align 4
   ; CHECK: store atomic i32 23, i32* %word monotonic, align 4
   store atomic volatile i32 24, i32* %word monotonic, align 4
   ; CHECK: store atomic volatile i32 24, i32* %word monotonic, align 4
-  store atomic volatile i32 25, i32* %word singlethread monotonic, align 4
-  ; CHECK: store atomic volatile i32 25, i32* %word singlethread monotonic, align 4
+  store atomic volatile i32 25, i32* %word syncscope("singlethread") monotonic, align 4
+  ; CHECK: store atomic volatile i32 25, i32* %word syncscope("singlethread") monotonic, align 4
   ret void
 }
 
@@ -1022,7 +1022,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #36
+  ; CHECK: call void @f.nobuiltin() #37
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1086,24 +1086,24 @@ proceed:
 ;; Intrinsic Functions
 
 ; Intrinsic Functions -- Variable Argument Handling
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_copy(i8*, i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start.p0i8(i8*)
+declare void @llvm.va_copy.p0i8.p0i8(i8*, i8*)
+declare void @llvm.va_end.p0i8(i8*)
 define void @instructions.va_arg(i8* %v, ...) {
   %ap = alloca i8*
   %ap2 = bitcast i8** %ap to i8*
 
-  call void @llvm.va_start(i8* %ap2)
-  ; CHECK: call void @llvm.va_start(i8* %ap2)
+  call void @llvm.va_start.p0i8(i8* %ap2)
+  ; CHECK: call void @llvm.va_start.p0i8(i8* %ap2)
 
   va_arg i8* %ap2, i32
   ; CHECK: va_arg i8* %ap2, i32
 
-  call void @llvm.va_copy(i8* %v, i8* %ap2)
-  ; CHECK: call void @llvm.va_copy(i8* %v, i8* %ap2)
+  call void @llvm.va_copy.p0i8.p0i8(i8* %v, i8* %ap2)
+  ; CHECK: call void @llvm.va_copy.p0i8.p0i8(i8* %v, i8* %ap2)
 
-  call void @llvm.va_end(i8* %ap2)
-  ; CHECK: call void @llvm.va_end(i8* %ap2)
+  call void @llvm.va_end.p0i8(i8* %ap2)
+  ; CHECK: call void @llvm.va_end.p0i8(i8* %ap2)
 
   ret void
 }
@@ -1159,9 +1159,9 @@ define void @intrinsics.codegen() {
   ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
 
   %stack = call i8* @llvm.stacksave()
-  ; CHECK: %stack = call i8* @llvm.stacksave()
+  ; CHECK: %stack = call i8* @llvm.stacksave.p0i8()
   call void @llvm.stackrestore(i8* %stack)
-  ; CHECK: call void @llvm.stackrestore(i8* %stack)
+  ; CHECK: call void @llvm.stackrestore.p0i8(i8* %stack)
 
   call void @llvm.prefetch(i8* %stack, i32 0, i32 3, i32 0)
   ; CHECK: call void @llvm.prefetch(i8* %stack, i32 0, i32 3, i32 0)
@@ -1243,10 +1243,11 @@ define void @misc.metadata() {
 ; CHECK: attributes #30 = { uwtable }
 ; CHECK: attributes #31 = { "cpu"="cortex-a8" }
 ; CHECK: attributes #32 = { nounwind readnone }
-; CHECK: attributes #33 = { nounwind readonly argmemonly }
-; CHECK: attributes #34 = { nounwind argmemonly }
+; CHECK: attributes #33 = { argmemonly nounwind readonly }
+; CHECK: attributes #34 = { argmemonly nounwind }
 ; CHECK: attributes #35 = { nounwind readonly }
-; CHECK: attributes #36 = { builtin }
+; CHECK: attributes #36 = { inaccessiblemem_or_argmemonly nounwind }
+; CHECK: attributes #37 = { builtin }
 
 ;; Metadata
 

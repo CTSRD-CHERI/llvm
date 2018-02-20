@@ -1,4 +1,6 @@
 ; RUN: llc %s -o - | FileCheck %s
+; RUN: llc -mtriple=armv7-linux -exception-model sjlj %s -o - | FileCheck %s -check-prefix CHECK-LINUX
+; RUN: llc -mtriple=thumbv7-win32 -exception-model sjlj %s -o - | FileCheck %s -check-prefix CHECK-WIN32
 target triple = "armv7-apple-ios"
 
 declare i32 @llvm.eh.sjlj.setjmp(i8*)
@@ -11,7 +13,7 @@ declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @llvm.frameaddress(i32)
-declare i8* @llvm.stacksave()
+declare i8* @llvm.stacksave.p0i8()
 @_ZTIPKc = external constant i8*
 
 ; CHECK-LABEL: foobar
@@ -28,6 +30,16 @@ declare i8* @llvm.stacksave()
 ; CHECK-NEXT: ldr [[DESTREG:r[0-9]+]], {{\[}}[[BUFREG]], #4]
 ; CHECK-NEXT: ldr r7, {{\[}}[[BUFREG]]{{\]}}
 ; CHECK-NEXT: bx [[DESTREG]]
+
+; CHECK-LINUX: ldr sp, [{{\s*}}[[BUFREG:r[0-9]+]], #8]
+; CHECK-LINUX-NEXT: ldr [[DESTREG:r[0-9]+]], {{\[}}[[BUFREG]], #4]
+; CHECK-LINUX-NEXT: ldr r7, {{\[}}[[BUFREG]]{{\]}}
+; CHECK-LINUX-NEXT: ldr r11, {{\[}}[[BUFREG]]{{\]}}
+; CHECK-LINUX-NEXT: bx [[DESTREG]]
+
+; CHECK-WIN32: ldr.w r11, [{{\s*}}[[BUFREG:r[0-9]+]]]
+; CHECK-WIN32-NEXT: ldr.w sp, {{\[}}[[BUFREG]], #8]
+; CHECK-WIN32-NEXT: ldr.w pc, {{\[}}[[BUFREG]], #4]
 define void @foobar() {
 entry:
   %buf = alloca [5 x i8*], align 4
@@ -88,7 +100,7 @@ catch:
   %arraydecay = getelementptr inbounds [5 x i8*], [5 x i8*]* %buf, i64 0, i64 0
   %6 = tail call i8* @llvm.frameaddress(i32 0)
   store i8* %6, i8** %arraydecay, align 16
-  %7 = tail call i8* @llvm.stacksave()
+  %7 = tail call i8* @llvm.stacksave.p0i8()
   %8 = getelementptr [5 x i8*], [5 x i8*]* %buf, i64 0, i64 2
   store i8* %7, i8** %8, align 16
   %9 = call i32 @llvm.eh.sjlj.setjmp(i8* %5)

@@ -1,10 +1,10 @@
-; RUN: llc -march=arm -mtriple=arm-linux-gnueabi < %s \
+; RUN: llc -mtriple=arm-linux-gnueabi < %s \
 ; RUN:     | FileCheck -check-prefix=CHECK-NONPIC -check-prefix=COMMON %s
-; RUN: llc -march=arm -mtriple=arm-linux-gnueabi -relocation-model=pic < %s \
+; RUN: llc -mtriple=arm-linux-gnueabi -relocation-model=pic < %s \
 ; RUN:     | FileCheck -check-prefix=CHECK-PIC  -check-prefix=COMMON %s
-; RUN: llc -emulated-tls -march=arm -mtriple=arm-linux-gnueabi < %s \
+; RUN: llc -emulated-tls -mtriple=arm-linux-gnueabi < %s \
 ; RUN:     | FileCheck -check-prefix=EMUNONPIC -check-prefix=EMU -check-prefix=COMMON %s
-; RUN: llc -emulated-tls -march=arm -mtriple=arm-linux-gnueabi -relocation-model=pic < %s \
+; RUN: llc -emulated-tls -mtriple=arm-linux-gnueabi -relocation-model=pic < %s \
 ; RUN:     | FileCheck -check-prefix=EMUPIC -check-prefix=EMU -check-prefix=COMMON %s
 
 
@@ -130,7 +130,7 @@ entry:
 
 ; EMU-NOT:   __emutls_t.external_gd
 ; EMU-NOT:   __emutls_v.external_gd
-; EMU:       .align 2
+; EMU:       .p2align 2
 ; EMU-LABEL: __emutls_v.internal_gd:
 ; EMU-NEXT:  .long 4
 ; EMU-NEXT:  .long 4
@@ -144,7 +144,7 @@ entry:
 
 ; EMU-NOT:   __emutls_t.external_gd
 ; EMU-NOT:   __emutls_v.external_gd
-; EMU:       .align 2
+; EMU:       .p2align 2
 ; EMU-LABEL: __emutls_v.internal_le:
 ; EMU-NEXT:  .long 4
 ; EMU-NEXT:  .long 4

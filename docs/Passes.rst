@@ -253,14 +253,6 @@ This pass decodes the debug info metadata in a module and prints in a
 For example, run this pass from ``opt`` along with the ``-analyze`` option, and
 it'll print to standard output.
 
-``-no-aa``: No Alias Analysis (always returns 'may' alias)
-----------------------------------------------------------
-
-This is the default implementation of the Alias Analysis interface.  It always
-returns "I don't know" for alias queries.  NoAA is unlike other alias analysis
-implementations, in that it does not chain to a previous analysis.  As such it
-doesn't follow many of the rules that other alias analyses must.
-
 ``-postdomfrontier``: Post-Dominance Frontier Construction
 ----------------------------------------------------------
 
@@ -649,6 +641,21 @@ not library calls are simplified is controlled by the
 :ref:`-functionattrs <passes-functionattrs>` pass and LLVM's knowledge of
 library calls on different targets.
 
+.. _passes-aggressive-instcombine:
+
+``-aggressive-instcombine``: Combine expression patterns
+--------------------------------------------------------
+
+Combine expression patterns to form expressions with fewer, simple instructions.
+This pass does not modify the CFG.
+
+For example, this pass reduce width of expressions post-dominated by TruncInst
+into smaller width when applicable.
+
+It differs from instcombine pass in that it contains pattern optimization that
+requires higher complexity than the O(1), thus, it should run fewer times than
+instcombine pass.
+
 ``-internalize``: Internalize Global Symbols
 --------------------------------------------
 
@@ -955,7 +962,7 @@ that this should make CFG hacking much easier.  To make later hacking easier,
 the entry block is split into two, such that all introduced ``alloca``
 instructions (and nothing else) are in the entry block.
 
-``-scalarrepl``: Scalar Replacement of Aggregates (DT)
+``-sroa``: Scalar Replacement of Aggregates
 ------------------------------------------------------
 
 The well-known scalar replacement of aggregates transformation.  This transform
@@ -963,12 +970,6 @@ breaks up ``alloca`` instructions of aggregate type (structure or array) into
 individual ``alloca`` instructions for each member if possible.  Then, if
 possible, it transforms the individual ``alloca`` instructions into nice clean
 scalar SSA form.
-
-This combines a simple scalar replacement of aggregates algorithm with the
-:ref:`mem2reg <passes-mem2reg>` algorithm because they often interact,
-especially for C++ programs.  As such, iterating between ``scalarrepl``, then
-:ref:`mem2reg <passes-mem2reg>` until we run out of things to promote works
-well.
 
 .. _passes-sccp:
 

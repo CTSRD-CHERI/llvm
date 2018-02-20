@@ -24,22 +24,25 @@ namespace llvm {
   class FunctionPass;
   class MachineFunctionPass;
 
-  ModulePass *createMipsOs16Pass(MipsTargetMachine &TM);
-  ModulePass *createMips16HardFloatPass(MipsTargetMachine &TM);
+  ModulePass *createMipsOs16Pass();
+  ModulePass *createMips16HardFloatPass();
 
-  FunctionPass *createMipsModuleISelDagPass(MipsTargetMachine &TM);
-  FunctionPass *createMipsOptimizePICCallPass(MipsTargetMachine &TM);
-  FunctionPass *createMipsDelaySlotFillerPass(MipsTargetMachine &TM);
-  FunctionPass *createMipsLongBranchPass(MipsTargetMachine &TM);
-  FunctionPass *createMipsConstantIslandPass(MipsTargetMachine &tm);
+  FunctionPass *createMipsModuleISelDagPass();
+  FunctionPass *createMipsOptimizePICCallPass();
+  FunctionPass *createMipsDelaySlotFillerPass();
+  FunctionPass *createMipsHazardSchedule();
+  FunctionPass *createMipsLongBranchPass();
+  FunctionPass *createMipsConstantIslandPass();
+  FunctionPass *createMicroMipsSizeReductionPass();
 
-  FunctionPass *createCheriInvalidatePass(MipsTargetMachine &TM);
+  FunctionPass *createCheriInvalidatePass();
   FunctionPass *createCheriRangeChecker();
-  FunctionPass *createCheriMemOpLowering();
   FunctionPass *createCheriLoopPointerDecanonicalize();
 
-  ModulePass *createCheriSandboxABI();
-  MachineFunctionPass *createCheriAddressingModeFolder(MipsTargetMachine &TM);
+  ModulePass *createCheriExpandIntrinsicsPass();
+  ModulePass *createCheriPureCapABI();
+  MachineFunctionPass *createCheriAddressingModeFolder();
+  MachineFunctionPass *createCheri128FailHardPass();
 } // end namespace llvm;
 
 #endif

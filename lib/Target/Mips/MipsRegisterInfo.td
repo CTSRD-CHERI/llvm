@@ -38,7 +38,7 @@ class MipsRegWithSubRegs<bits<16> Enc, string n, list<Register> subregs>
   let Namespace = "Mips";
 }
 
-// Mips CPU Registers
+// Mips CPU Registers.
 class MipsGPRReg<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
 // Mips 64-bit CPU Registers
@@ -78,6 +78,9 @@ class ACCReg<bits<16> Enc, string n, list<Register> subregs>
 
 // Mips Hardware Registers
 class HWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
+
+// CHERI Hardware Registers
+class CheriHWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
 // CHERI capability registers
 class CAP<bits<16> Enc, string n> : MipsReg<Enc, n>;
@@ -228,6 +231,9 @@ let Namespace = "Mips" in {
   foreach I = 4-31 in
   def HWR#I : MipsReg<#I, ""#I>;
 
+  foreach I = 0-31 in
+  def CAPHWR#I : MipsReg<#I, ""#I>;
+
   // Accum registers
   foreach I = 0-3 in
   def AC#I : ACCReg<#I, "ac"#I,
@@ -264,38 +270,38 @@ let Namespace = "Mips" in {
   def MSAUnmap   : MipsReg<7, "7">;
 
   // Capability registers
-  def C0  : CAP<0, "C0">, DwarfRegNum<[64]>;
-  def C1  : CAP<1, "C1">, DwarfRegNum<[65]>;
-  def C2  : CAP<2, "C2">, DwarfRegNum<[66]>;
-  def C3  : CAP<3, "C3">, DwarfRegNum<[67]>;
-  def C4  : CAP<4, "C4">, DwarfRegNum<[68]>;
-  def C5  : CAP<5, "C5">, DwarfRegNum<[69]>;
-  def C6  : CAP<6, "C6">, DwarfRegNum<[70]>;
-  def C7  : CAP<7, "C7">, DwarfRegNum<[71]>;
-  def C8  : CAP<8, "C8">, DwarfRegNum<[72]>;
-  def C9  : CAP<9, "C9">, DwarfRegNum<[73]>;
-  def C10 : CAP<10, "C10">, DwarfRegNum<[74]>;
-  def C11 : CAP<11, "C11">, DwarfRegNum<[75]>;
-  def C12 : CAP<12, "C12">, DwarfRegNum<[76]>;
-  def C13 : CAP<13, "C13">, DwarfRegNum<[77]>;
-  def C14 : CAP<14, "C14">, DwarfRegNum<[78]>;
-  def C15 : CAP<15, "C15">, DwarfRegNum<[79]>;
-  def C16 : CAP<16, "C16">, DwarfRegNum<[80]>;
-  def C17 : CAP<17, "C17">, DwarfRegNum<[81]>;
-  def C18 : CAP<18, "C18">, DwarfRegNum<[82]>;
-  def C19 : CAP<19, "C19">, DwarfRegNum<[83]>;
-  def C20 : CAP<20, "C20">, DwarfRegNum<[84]>;
-  def C21 : CAP<21, "C21">, DwarfRegNum<[85]>;
-  def C22 : CAP<22, "C22">, DwarfRegNum<[86]>;
-  def C23 : CAP<23, "C23">, DwarfRegNum<[87]>;
-  def C24 : CAP<24, "C24">, DwarfRegNum<[88]>;
-  def C25 : CAP<25, "C25">, DwarfRegNum<[89]>;
-  def C26 : CAP<26, "C26">, DwarfRegNum<[90]>;
-  def C27 : CAP<27, "C27">, DwarfRegNum<[91]>;
-  def C28 : CAP<28, "C28">, DwarfRegNum<[92]>;
-  def C29 : CAP<29, "C29">, DwarfRegNum<[93]>;
-  def C30 : CAP<30, "C30">, DwarfRegNum<[94]>;
-  def C31 : CAP<31, "C31">, DwarfRegNum<[95]>;
+  def C0  : CAP<0, "C0">, DwarfRegNum<[72]>;
+  def C1  : CAP<1, "C1">, DwarfRegNum<[73]>;
+  def C2  : CAP<2, "C2">, DwarfRegNum<[74]>;
+  def C3  : CAP<3, "C3">, DwarfRegNum<[75]>;
+  def C4  : CAP<4, "C4">, DwarfRegNum<[76]>;
+  def C5  : CAP<5, "C5">, DwarfRegNum<[77]>;
+  def C6  : CAP<6, "C6">, DwarfRegNum<[78]>;
+  def C7  : CAP<7, "C7">, DwarfRegNum<[79]>;
+  def C8  : CAP<8, "C8">, DwarfRegNum<[80]>;
+  def C9  : CAP<9, "C9">, DwarfRegNum<[81]>;
+  def C10 : CAP<10, "C10">, DwarfRegNum<[82]>;
+  def C11 : CAP<11, "C11">, DwarfRegNum<[83]>;
+  def C12 : CAP<12, "C12">, DwarfRegNum<[84]>;
+  def C13 : CAP<13, "C13">, DwarfRegNum<[85]>;
+  def C14 : CAP<14, "C14">, DwarfRegNum<[86]>;
+  def C15 : CAP<15, "C15">, DwarfRegNum<[87]>;
+  def C16 : CAP<16, "C16">, DwarfRegNum<[88]>;
+  def C17 : CAP<17, "C17">, DwarfRegNum<[89]>;
+  def C18 : CAP<18, "C18">, DwarfRegNum<[90]>;
+  def C19 : CAP<19, "C19">, DwarfRegNum<[91]>;
+  def C20 : CAP<20, "C20">, DwarfRegNum<[92]>;
+  def C21 : CAP<21, "C21">, DwarfRegNum<[93]>;
+  def C22 : CAP<22, "C22">, DwarfRegNum<[94]>;
+  def C23 : CAP<23, "C23">, DwarfRegNum<[95]>;
+  def C24 : CAP<24, "C24">, DwarfRegNum<[96]>;
+  def C25 : CAP<25, "C25">, DwarfRegNum<[97]>;
+  def C26 : CAP<26, "C26">, DwarfRegNum<[98]>;
+  def C27 : CAP<27, "C27">, DwarfRegNum<[99]>;
+  def C28 : CAP<28, "C28">, DwarfRegNum<[100]>;
+  def C29 : CAP<29, "C29">, DwarfRegNum<[101]>;
+  def C30 : CAP<30, "C30">, DwarfRegNum<[102]>;
+  def C31 : CAP<31, "C31">, DwarfRegNum<[103]>;
 
   // Octeon multiplier and product registers
   def MPL0 : MipsReg<0, "mpl0">;
@@ -327,6 +333,25 @@ class GPR32Class<list<ValueType> regTypes> :
   K0, K1, GP, SP, FP, RA)>;
 
 def GPR32 : GPR32Class<[i32]>;
+
+def GPR32ZERO : RegisterClass<"Mips", [i32], 32, (add
+  // Reserved
+  ZERO)>;
+
+def GPR32NONZERO : RegisterClass<"Mips", [i32], 32, (add
+  // Reserved
+  AT,
+  // Return Values and Arguments
+  V0, V1, A0, A1, A2, A3,
+  // Not preserved across procedure calls
+  T0, T1, T2, T3, T4, T5, T6, T7,
+  // Callee save
+  S0, S1, S2, S3, S4, S5, S6, S7,
+  // Not preserved across procedure calls
+  T8, T9,
+  // Reserved
+  K0, K1, GP, SP, FP, RA)>;
+
 def DSPR  : GPR32Class<[v4i8, v2i16]>;
 
 def GPRMM16 : RegisterClass<"Mips", [i32], 32, (add
@@ -354,7 +379,7 @@ def GPRMM16MoveP : RegisterClass<"Mips", [i32], 32, (add
   S0, S2, S3, S4)>;
 
 def GPR64 : RegisterClass<"Mips", [i64], 64, (add
-// Reserved
+  // Reserved
   ZERO_64, AT_64,
   // Return Values and Arguments
   V0_64, V1_64, A0_64, A1_64, A2_64, A3_64,
@@ -384,12 +409,22 @@ def CPURAReg : RegisterClass<"Mips", [i32], 32, (add RA)>, Unallocatable;
 
 def CPUSPReg : RegisterClass<"Mips", [i32], 32, (add SP)>, Unallocatable;
 
-def CheriRegs : RegisterClass<"Mips", [iFATPTR], 256, (add
+def CapRegType : ValueTypeByHwMode<[Cap64, Cap128, Cap256, DefaultMode],
+                                   [iFATPTR64, iFATPTR128, iFATPTR256, iFATPTR128]>;
+
+def CheriRegs : RegisterClass<"Mips", [CapRegType], 256, (add
   C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, 
   C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, 
   C20, C21, C22, C23, C24, C25, C26, C27, C28, C29, 
   C30, C31)> {
-  let Alignment = 256;
+  let RegInfos = RegInfoByHwMode<[Cap64, Cap128, Cap256, DefaultMode],
+       [RegInfo<64,64,64>, RegInfo<128,128,128>, RegInfo<256,256,256>, RegInfo<128,128,128>]>;
+}
+def FakeCheriRegs : RegisterClass<"Mips", [iFATPTR256], 256, (add C0)>;
+
+def CheriHWRegs : RegisterClass<"Mips", [CapRegType], 256, (sequence "CAPHWR%u", 0, 31)>, Unallocatable {
+  let RegInfos = RegInfoByHwMode<[Cap64, Cap128, Cap256, DefaultMode],
+         [RegInfo<64,64,64>, RegInfo<128,128,128>, RegInfo<256,256,256>, RegInfo<128,128,128>]>;
 }
 
 // 64bit fp:
@@ -438,6 +473,8 @@ def FCC : RegisterClass<"Mips", [i32], 32, (sequence "FCC%u", 0, 7)>,
 // MIPS32r6/MIPS64r6 store FPU condition codes in normal FGR registers.
 // This class allows us to represent this in codegen patterns.
 def FGRCC : RegisterClass<"Mips", [i32], 32, (sequence "F%u", 0, 31)>;
+
+def MSA128F16 : RegisterClass<"Mips", [f16], 128, (sequence "W%u", 0, 31)>;
 
 def MSA128B: RegisterClass<"Mips", [v16i8], 128,
                            (sequence "W%u", 0, 31)>;
@@ -492,6 +529,13 @@ def COP2 : RegisterClass<"Mips", [i32], 32, (sequence "COP2%u", 0, 31)>,
 def COP3 : RegisterClass<"Mips", [i32], 32, (sequence "COP3%u", 0, 31)>,
            Unallocatable;
 
+// Stack pointer and global pointer classes for instructions that are limited
+// to a single register such as lwgp/lwsp in microMIPS.
+def SP32 : RegisterClass<"Mips", [i32], 32, (add SP)>, Unallocatable;
+def SP64 : RegisterClass<"Mips", [i64], 64, (add SP_64)>, Unallocatable;
+def GP32 : RegisterClass<"Mips", [i32], 32, (add GP)>, Unallocatable;
+def GP64 : RegisterClass<"Mips", [i64], 64, (add GP_64)>, Unallocatable;
+
 // Octeon multiplier and product registers
 def OCTEON_MPL : RegisterClass<"Mips", [i64], 64, (add MPL0, MPL1, MPL2)>,
                  Unallocatable;
@@ -512,6 +556,16 @@ def GPR64AsmOperand : MipsAsmRegOperand {
 def CheriAsmOperand : MipsAsmRegOperand {
   let Name = "CheriAsmReg";
   let PredicateMethod = "isCheriAsmReg";
+}
+
+def GPR32ZeroAsmOperand : MipsAsmRegOperand {
+  let Name = "GPR32ZeroAsmReg";
+  let PredicateMethod = "isGPRZeroAsmReg";
+}
+
+def GPR32NonZeroAsmOperand : MipsAsmRegOperand {
+  let Name = "GPR32NonZeroAsmReg";
+  let PredicateMethod = "isGPRNonZeroAsmReg";
 }
 
 def GPR32AsmOperand : MipsAsmRegOperand {
@@ -558,14 +612,29 @@ def AFGR64AsmOperand : MipsAsmRegOperand {
   let PredicateMethod = "isFGRAsmReg";
 }
 
+def StrictlyAFGR64AsmOperand : MipsAsmRegOperand {
+  let Name = "StrictlyAFGR64AsmReg";
+  let PredicateMethod = "isStrictlyFGRAsmReg";
+}
+
 def FGR64AsmOperand : MipsAsmRegOperand {
   let Name = "FGR64AsmReg";
   let PredicateMethod = "isFGRAsmReg";
 }
 
+def StrictlyFGR64AsmOperand : MipsAsmRegOperand {
+  let Name = "StrictlyFGR64AsmReg";
+  let PredicateMethod = "isStrictlyFGRAsmReg";
+}
+
 def FGR32AsmOperand : MipsAsmRegOperand {
   let Name = "FGR32AsmReg";
   let PredicateMethod = "isFGRAsmReg";
+}
+
+def StrictlyFGR32AsmOperand : MipsAsmRegOperand {
+  let Name = "StrictlyFGR32AsmReg";
+  let PredicateMethod = "isStrictlyFGRAsmReg";
 }
 
 def FGRH32AsmOperand : MipsAsmRegOperand {
@@ -585,6 +654,14 @@ def MSACtrlAsmOperand : MipsAsmRegOperand {
   let Name = "MSACtrlAsmReg";
 }
 
+def GPR32ZeroOpnd : RegisterOperand<GPR32ZERO> {
+  let ParserMatchClass = GPR32ZeroAsmOperand;
+}
+
+def GPR32NonZeroOpnd : RegisterOperand<GPR32NONZERO> {
+  let ParserMatchClass = GPR32NonZeroAsmOperand;
+}
+
 def GPR32Opnd : RegisterOperand<GPR32> {
   let ParserMatchClass = GPR32AsmOperand;
 }
@@ -599,6 +676,7 @@ def GPRMM16OpndZero : RegisterOperand<GPRMM16Zero> {
 
 def GPRMM16OpndMoveP : RegisterOperand<GPRMM16MoveP> {
   let ParserMatchClass = GPRMM16AsmOperandMoveP;
+  let EncoderMethod = "getMovePRegSingleOpValue";
 }
 
 def GPR64Opnd : RegisterOperand<GPR64> {
@@ -615,6 +693,10 @@ def CCROpnd : RegisterOperand<CCR> {
 
 def HWRegsAsmOperand : MipsAsmRegOperand {
   let Name = "HWRegsAsmReg";
+}
+
+def CheriHWRegsAsmOperand : MipsAsmRegOperand {
+  let Name = "CheriHWRegsAsmReg";
 }
 
 def COP0AsmOperand : MipsAsmRegOperand {
@@ -638,16 +720,32 @@ def HWRegsOpnd : RegisterOperand<HWRegs> {
   let ParserMatchClass = HWRegsAsmOperand;
 }
 
+def CheriHWRegsOpnd : RegisterOperand<CheriHWRegs> {
+  let ParserMatchClass = CheriHWRegsAsmOperand;
+}
+
 def AFGR64Opnd : RegisterOperand<AFGR64> {
   let ParserMatchClass = AFGR64AsmOperand;
+}
+
+def StrictlyAFGR64Opnd : RegisterOperand<AFGR64> {
+  let ParserMatchClass = StrictlyAFGR64AsmOperand;
 }
 
 def FGR64Opnd : RegisterOperand<FGR64> {
   let ParserMatchClass = FGR64AsmOperand;
 }
 
+def StrictlyFGR64Opnd : RegisterOperand<FGR64> {
+  let ParserMatchClass = StrictlyFGR64AsmOperand;
+}
+
 def FGR32Opnd : RegisterOperand<FGR32> {
   let ParserMatchClass = FGR32AsmOperand;
+}
+
+def StrictlyFGR32Opnd : RegisterOperand<FGR32> {
+  let ParserMatchClass = StrictlyFGR32AsmOperand;
 }
 
 def FGRCCOpnd : RegisterOperand<FGRCC> {
@@ -686,6 +784,10 @@ def COP2Opnd : RegisterOperand<COP2> {
 
 def COP3Opnd : RegisterOperand<COP3> {
   let ParserMatchClass = COP3AsmOperand;
+}
+
+def MSA128F16Opnd : RegisterOperand<MSA128F16> {
+  let ParserMatchClass = MSA128AsmOperand;
 }
 
 def MSA128BOpnd : RegisterOperand<MSA128B> {

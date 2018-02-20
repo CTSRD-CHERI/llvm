@@ -12,8 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -35,8 +36,12 @@ OutputFilename("o", cl::desc("Override output filename"),
 static cl::opt<unsigned> NumOutputs("j", cl::Prefix, cl::init(2),
                                     cl::desc("Number of output files"));
 
+static cl::opt<bool>
+    PreserveLocals("preserve-locals", cl::Prefix, cl::init(false),
+                   cl::desc("Split without externalizing locals"));
+
 int main(int argc, char **argv) {
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
   SMDiagnostic Err;
   cl::ParseCommandLineOptions(argc, argv, "LLVM module splitter\n");
 
@@ -50,18 +55,19 @@ int main(int argc, char **argv) {
   unsigned I = 0;
   SplitModule(std::move(M), NumOutputs, [&](std::unique_ptr<Module> MPart) {
     std::error_code EC;
-    std::unique_ptr<tool_output_file> Out(new tool_output_file(
-        OutputFilename + utostr(I++), EC, sys::fs::F_None));
+    std::unique_ptr<ToolOutputFile> Out(
+        new ToolOutputFile(OutputFilename + utostr(I++), EC, sys::fs::F_None));
     if (EC) {
       errs() << EC.message() << '\n';
       exit(1);
     }
 
-    WriteBitcodeToFile(MPart.get(), Out->os());
+    verifyModule(*MPart);
+    WriteBitcodeToFile(*MPart, Out->os());
 
     // Declare success.
     Out->keep();
-  });
+  }, PreserveLocals);
 
   return 0;
 }

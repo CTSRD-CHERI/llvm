@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=false | FileCheck %s
+; Make sure shrink-wrapping does not break the lowering of exception handling.
+; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=true | FileCheck %s
 
 ; Repro cases from PR25168
 
@@ -20,19 +22,17 @@ body:
   invoke void @f()
           to label %exit unwind label %catch.pad
 catch.pad:
-  %catch = catchpad [i32 33554467]
-          to label %catch.body unwind label %catch.end
+  %cs1 = catchswitch within none [label %catch.body] unwind to caller
 catch.body:
-  catchret %catch to label %exit
-catch.end:
-  catchendpad unwind to caller
+  %catch = catchpad within %cs1 [i32 33554467]
+  catchret from %catch to label %exit
 exit:
   ret void
 }
 ; CHECK-LABEL: catchret:  # @catchret
 ; CHECK: [[Exit:^[^ :]+]]: # Block address taken
 ; CHECK-NEXT:              # %exit
-; CHECK: # %catch.pad
+; CHECK: # %catch.body
 ; CHECK: .seh_endprolog
 ; CHECK: leaq [[Exit]](%rip), %rax
 ; CHECK: retq # CATCHRET
@@ -43,7 +43,7 @@ exit:
 
 @buf = internal global [5 x i8*] zeroinitializer
 declare i8* @llvm.frameaddress(i32) nounwind readnone
-declare i8* @llvm.stacksave() nounwind
+declare i8* @llvm.stacksave.p0i8() nounwind
 declare i32 @llvm.eh.sjlj.setjmp(i8*) nounwind
 declare void @llvm.eh.sjlj.longjmp(i8*) nounwind
 
@@ -55,7 +55,7 @@ early_out:
 sj:
   %fp = call i8* @llvm.frameaddress(i32 0)
   store i8* %fp, i8** getelementptr inbounds ([5 x i8*], [5 x i8*]* @buf, i64 0, i64 0), align 16
-  %sp = call i8* @llvm.stacksave()
+  %sp = call i8* @llvm.stacksave.p0i8()
   store i8* %sp, i8** getelementptr inbounds ([5 x i8*], [5 x i8*]* @buf, i64 0, i64 2), align 16
   call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([5 x i8*]* @buf to i8*))
   ret void

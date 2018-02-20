@@ -17,29 +17,29 @@
 ; The WL prefix means weak (the other file) first, then linkonce (this file).
 
 ; We'll see @bar before @foo if this file is first.
-; LW-LABEL: define i32 @bar(
+; LW: define i32 @bar({{.*}} !dbg ![[BARSP:[0-9]+]]
 ; LW: %sum = add i32 %a, %b, !dbg ![[FOOINBAR:[0-9]+]]
 ; LW: ret i32 %sum, !dbg ![[BARRET:[0-9]+]]
-; LW-LABEL: define weak i32 @foo(
+; LW: define weak i32 @foo({{.*}} !dbg ![[WEAKFOOSP:[0-9]+]]
 ; LW: %sum = call i32 @fastadd(i32 %a, i32 %b), !dbg ![[FOOCALL:[0-9]+]]
 ; LW: ret i32 %sum, !dbg ![[FOORET:[0-9]+]]
 
 ; We'll see @foo before @bar if this file is second.
-; WL-LABEL: define weak i32 @foo(
+; WL: define weak i32 @foo({{.*}} !dbg ![[WEAKFOOSP:[0-9]+]]
 ; WL: %sum = call i32 @fastadd(i32 %a, i32 %b), !dbg ![[FOOCALL:[0-9]+]]
 ; WL: ret i32 %sum, !dbg ![[FOORET:[0-9]+]]
-; WL-LABEL: define i32 @bar(
+; WL: define i32 @bar({{.*}} !dbg ![[BARSP:[0-9]+]]
 ; WL: %sum = add i32 %a, %b, !dbg ![[FOOINBAR:[0-9]+]]
 ; WL: ret i32 %sum, !dbg ![[BARRET:[0-9]+]]
 
-define i32 @bar(i32 %a, i32 %b) {
+define i32 @bar(i32 %a, i32 %b) !dbg !3 {
 entry:
   %sum = add i32 %a, %b, !dbg !DILocation(line: 2, scope: !4,
                                           inlinedAt: !DILocation(line: 12, scope: !3))
   ret i32 %sum, !dbg !DILocation(line: 13, scope: !3)
 }
 
-define linkonce i32 @foo(i32 %a, i32 %b) {
+define linkonce i32 @foo(i32 %a, i32 %b) !dbg !4 {
 entry:
   %sum = add i32 %a, %b, !dbg !DILocation(line: 2, scope: !4)
   ret i32 %sum, !dbg !DILocation(line: 3, scope: !4)
@@ -53,53 +53,41 @@ entry:
 ; WL-SAME: !{![[WCU:[0-9]+]], ![[LCU:[0-9]+]]}
 !llvm.dbg.cu = !{!1}
 
-; LW: ![[LCU]] = distinct !DICompileUnit({{.*}} subprograms: ![[LSPs:[0-9]+]]
-; LW: ![[LSPs]] = !{![[BARSP:[0-9]+]], ![[FOOSP:[0-9]+]]}
-; LW: ![[BARSP]] = distinct !DISubprogram(name: "bar",
-; LW-SAME: function: i32 (i32, i32)* @bar
-; LW: ![[FOOSP]] = distinct !DISubprogram(name: "foo",
-; LW-NOT: function:
-; LW-SAME: ){{$}}
-; LW: ![[WCU]] = distinct !DICompileUnit({{.*}} subprograms: ![[WSPs:[0-9]+]]
-; LW: ![[WSPs]] = !{![[WEAKFOOSP:[0-9]+]]}
-; LW: ![[WEAKFOOSP]] = distinct !DISubprogram(name: "foo",
-; LW-SAME: function: i32 (i32, i32)* @foo
-; LW: ![[FOOINBAR]] = !DILocation(line: 2, scope: ![[FOOSP]], inlinedAt: ![[BARIA:[0-9]+]])
+; LW: ![[LCU]] = distinct !DICompileUnit(
+; LW: ![[WCU]] = distinct !DICompileUnit(
+; LW: ![[BARSP]] = distinct !DISubprogram(name: "bar",{{.*}} unit: ![[LCU]]
+; LW: ![[FOOINBAR]] = !DILocation(line: 2, scope: ![[FOOSP:.*]], inlinedAt: ![[BARIA:[0-9]+]])
+; LW: ![[FOOSP]] = distinct !DISubprogram(name: "foo",{{.*}} unit: ![[LCU]]
 ; LW: ![[BARIA]] = !DILocation(line: 12, scope: ![[BARSP]])
 ; LW: ![[BARRET]] = !DILocation(line: 13, scope: ![[BARSP]])
+; LW: ![[WEAKFOOSP]] = distinct !DISubprogram(name: "foo",{{.*}} unit: ![[WCU]]
 ; LW: ![[FOOCALL]] = !DILocation(line: 52, scope: ![[WEAKFOOSP]])
 ; LW: ![[FOORET]] = !DILocation(line: 53, scope: ![[WEAKFOOSP]])
 
 ; Same as above, but reordered.
-; WL: ![[WCU]] = distinct !DICompileUnit({{.*}} subprograms: ![[WSPs:[0-9]+]]
-; WL: ![[WSPs]] = !{![[WEAKFOOSP:[0-9]+]]}
-; WL: ![[WEAKFOOSP]] = distinct !DISubprogram(name: "foo",
-; WL-SAME: function: i32 (i32, i32)* @foo
-; WL: ![[LCU]] = distinct !DICompileUnit({{.*}} subprograms: ![[LSPs:[0-9]+]]
-; WL: ![[LSPs]] = !{![[BARSP:[0-9]+]], ![[FOOSP:[0-9]+]]}
-; WL: ![[BARSP]] = distinct !DISubprogram(name: "bar",
-; WL-SAME: function: i32 (i32, i32)* @bar
-; WL: ![[FOOSP]] = distinct !DISubprogram(name: "foo",
-; Note, for symmetry, this should be "NOT: function:" and "SAME: ){{$}}".
-; WL-SAME: function: i32 (i32, i32)* @foo
+; WL: ![[WCU]] = distinct !DICompileUnit(
+; WL: ![[LCU]] = distinct !DICompileUnit(
+; WL: ![[WEAKFOOSP]] = distinct !DISubprogram(name: "foo",{{.*}} unit: ![[WCU]]
 ; WL: ![[FOOCALL]] = !DILocation(line: 52, scope: ![[WEAKFOOSP]])
 ; WL: ![[FOORET]] = !DILocation(line: 53, scope: ![[WEAKFOOSP]])
-; WL: ![[FOOINBAR]] = !DILocation(line: 2, scope: ![[FOOSP]], inlinedAt: ![[BARIA:[0-9]+]])
+; WL: ![[BARSP]] = distinct !DISubprogram(name: "bar",{{.*}} unit: ![[LCU]]
+; WL: ![[FOOINBAR]] = !DILocation(line: 2, scope: ![[FOOSP:.*]], inlinedAt: ![[BARIA:[0-9]+]])
+; WL: ![[FOOSP]] = distinct !DISubprogram(name: "foo",{{.*}} unit: ![[LCU]]
 ; WL: ![[BARIA]] = !DILocation(line: 12, scope: ![[BARSP]])
 ; WL: ![[BARRET]] = !DILocation(line: 13, scope: ![[BARSP]])
 
-!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, subprograms: !{!3, !4}, emissionKind: 1)
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, emissionKind: FullDebug)
 !2 = !DIFile(filename: "bar.c", directory: "/path/to/dir")
-!3 = distinct !DISubprogram(file: !2, scope: !2, line: 11, name: "bar", function: i32 (i32, i32)* @bar, type: !5)
-!4 = distinct !DISubprogram(file: !2, scope: !2, line: 1, name: "foo", function: i32 (i32, i32)* @foo, type: !5)
+!3 = distinct !DISubprogram(file: !2, scope: !2, line: 11, name: "bar", type: !5, unit: !1)
+!4 = distinct !DISubprogram(file: !2, scope: !2, line: 1, name: "foo", type: !5, unit: !1)
 !5 = !DISubroutineType(types: !{})
 
 ; Crasher for llc.
 ; REQUIRES: object-emission
 ; RUN: %llc_dwarf -filetype=obj -O0 %t1 -o %t1.o
-; RUN: llvm-dwarfdump %t1.o -debug-dump=all | FileCheck %s -check-prefix=DWLW -check-prefix=DW
+; RUN: llvm-dwarfdump %t1.o --all | FileCheck %s -check-prefix=DWLW -check-prefix=DW
 ; RUN: %llc_dwarf -filetype=obj -O0 %t2 -o %t2.o
-; RUN: llvm-dwarfdump %t2.o -debug-dump=all | FileCheck %s -check-prefix=DWWL -check-prefix=DW
+; RUN: llvm-dwarfdump %t2.o --all | FileCheck %s -check-prefix=DWWL -check-prefix=DW
 ; Check that the debug info for the discarded linkonce version of @foo doesn't
 ; reference any code, and that the other subprograms look correct.
 
@@ -159,14 +147,14 @@ entry:
 ; DW-LABEL:   .debug_line contents:
 ; Check that we have the right things in the line table as well.
 
-; DWLW-LABEL: file_names[{{ *}}1]{{.*}} bar.c
+; DWLW-LABEL: file_names[{{ *}}1]{{.*}} "bar.c"
 ; DWLW:        2 0 1 0 0 is_stmt prologue_end
-; DWLW-LABEL: file_names[{{ *}}1]{{.*}} foo.c
+; DWLW-LABEL: file_names[{{ *}}1]{{.*}} "foo.c"
 ; DWLW:       52 0 1 0 0 is_stmt prologue_end
 ; DWLW-NOT:                      prologue_end
 
-; DWWL-LABEL: file_names[{{ *}}1]{{.*}} foo.c
+; DWWL-LABEL: file_names[{{ *}}1]{{.*}} "foo.c"
 ; DWWL:       52 0 1 0 0 is_stmt prologue_end
-; DWWL-LABEL: file_names[{{ *}}1]{{.*}} bar.c
+; DWWL-LABEL: file_names[{{ *}}1]{{.*}} "bar.c"
 ; DWWL:        2 0 1 0 0 is_stmt prologue_end
 ; DWWL-NOT:                      prologue_end

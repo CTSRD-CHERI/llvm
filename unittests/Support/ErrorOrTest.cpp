@@ -16,7 +16,7 @@ using namespace llvm;
 
 namespace {
 
-ErrorOr<int> t1() {return 1;}
+ErrorOr<int> t1() { return 1; }
 ErrorOr<int> t2() { return errc::invalid_argument; }
 
 TEST(ErrorOr, SimpleValue) {
@@ -71,6 +71,46 @@ TEST(ErrorOr, Comparison) {
   EXPECT_EQ(x, errc::no_such_file_or_directory);
 }
 
+TEST(ErrorOr, ImplicitConversion) {
+  ErrorOr<std::string> x("string literal");
+  EXPECT_TRUE(!!x);
+}
+
+TEST(ErrorOr, ImplicitConversionCausesMove) {
+  struct Source {};
+  struct Destination {
+    Destination(const Source&) {}
+    Destination(Source&&) = delete;
+  };
+  Source s;
+  ErrorOr<Destination> x = s;
+  EXPECT_TRUE(!!x);
+}
+
+TEST(ErrorOr, ImplicitConversionNoAmbiguity) {
+  struct CastsToErrorCode {
+    CastsToErrorCode() = default;
+    CastsToErrorCode(std::error_code) {}
+    operator std::error_code() { return errc::invalid_argument; }
+  } casts_to_error_code;
+  ErrorOr<CastsToErrorCode> x1(casts_to_error_code);
+  ErrorOr<CastsToErrorCode> x2 = casts_to_error_code;
+  ErrorOr<CastsToErrorCode> x3 = {casts_to_error_code};
+  ErrorOr<CastsToErrorCode> x4{casts_to_error_code};
+  ErrorOr<CastsToErrorCode> x5(errc::no_such_file_or_directory);
+  ErrorOr<CastsToErrorCode> x6 = errc::no_such_file_or_directory;
+  ErrorOr<CastsToErrorCode> x7 = {errc::no_such_file_or_directory};
+  ErrorOr<CastsToErrorCode> x8{errc::no_such_file_or_directory};
+  EXPECT_TRUE(!!x1);
+  EXPECT_TRUE(!!x2);
+  EXPECT_TRUE(!!x3);
+  EXPECT_TRUE(!!x4);
+  EXPECT_FALSE(x5);
+  EXPECT_FALSE(x6);
+  EXPECT_FALSE(x7);
+  EXPECT_FALSE(x8);
+}
+
 // ErrorOr<int*> x(nullptr);
 // ErrorOr<std::unique_ptr<int>> y = x; // invalid conversion
 static_assert(
@@ -88,13 +128,13 @@ static_assert(
 // ErrorOr<int*> x(nullptr);
 // ErrorOr<std::unique_ptr<int>> y;
 // y = x; // invalid conversion
-static_assert(!std::is_assignable<ErrorOr<std::unique_ptr<int>>,
+static_assert(!std::is_assignable<ErrorOr<std::unique_ptr<int>>&,
                                   const ErrorOr<int *> &>::value,
               "do not invoke explicit ctors in assignment");
 
 // ErrorOr<std::unique_ptr<int>> x;
 // x = ErrorOr<int*>(nullptr); // invalid conversion
-static_assert(!std::is_assignable<ErrorOr<std::unique_ptr<int>>,
+static_assert(!std::is_assignable<ErrorOr<std::unique_ptr<int>>&,
                                   ErrorOr<int *> &&>::value,
               "do not invoke explicit ctors in assignment");
 } // end anon namespace

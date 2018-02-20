@@ -1,4 +1,4 @@
-//===-- MipsSEFrameLowering.cpp - Mips32/64 Frame Information -------------===//
+//===- MipsSEFrameLowering.cpp - Mips32/64 Frame Information --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,22 +12,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsSEFrameLowering.h"
-#include "MCTargetDesc/MipsBaseInfo.h"
-#include "MipsAnalyzeImmediate.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsMachineFunction.h"
+#include "MipsRegisterInfo.h"
 #include "MipsSEInstrInfo.h"
 #include "MipsSubtarget.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetOptions.h"
+#include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MachineLocation.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 static llvm::cl::opt<bool>
 CHERICFI(
@@ -37,9 +53,6 @@ CHERICFI(
 
 
 using namespace llvm;
-
-namespace {
-typedef MachineBasicBlock::iterator Iter;
 
 static std::pair<unsigned, unsigned> getMFHiLoOpc(unsigned Src) {
   if (Mips::ACC64RegClass.contains(Src))
@@ -56,6 +69,8 @@ static std::pair<unsigned, unsigned> getMFHiLoOpc(unsigned Src) {
   return std::make_pair(0, 0);
 }
 
+namespace {
+
 /// Helper class to expand pseudos.
 class ExpandPseudo {
 public:
@@ -63,6 +78,8 @@ public:
   bool expand();
 
 private:
+  using Iter = MachineBasicBlock::iterator;
+
   bool expandInstr(MachineBasicBlock &MBB, Iter I);
   void expandLoadCCond(MachineBasicBlock &MBB, Iter I);
   void expandStoreCCond(MachineBasicBlock &MBB, Iter I);
@@ -83,7 +100,8 @@ private:
   const MipsSEInstrInfo &TII;
   const MipsRegisterInfo &RegInfo;
 };
-}
+
+} // end anonymous namespace
 
 ExpandPseudo::ExpandPseudo(MachineFunction &MF_)
     : MF(MF_), MRI(MF.getRegInfo()),
@@ -94,10 +112,10 @@ ExpandPseudo::ExpandPseudo(MachineFunction &MF_)
 bool ExpandPseudo::expand() {
   bool Expanded = false;
 
-  for (MachineFunction::iterator BB = MF.begin(), BBEnd = MF.end();
-       BB != BBEnd; ++BB)
-    for (Iter I = BB->begin(), End = BB->end(); I != End;)
-      Expanded |= expandInstr(*BB, I++);
+  for (auto &MBB : MF) {
+    for (Iter I = MBB.begin(), End = MBB.end(); I != End;)
+      Expanded |= expandInstr(MBB, I++);
+  }
 
   return Expanded;
 }
@@ -249,7 +267,8 @@ bool ExpandPseudo::expandCopyACC(MachineBasicBlock &MBB, Iter I,
   //  copy dst_hi, $vr1
 
   unsigned Dst = I->getOperand(0).getReg(), Src = I->getOperand(1).getReg();
-  unsigned VRegSize = RegInfo.getMinimalPhysRegClass(Dst)->getSize() / 2;
+  const TargetRegisterClass *DstRC = RegInfo.getMinimalPhysRegClass(Dst);
+  unsigned VRegSize = RegInfo.getRegSizeInBits(*DstRC) / 16;
   const TargetRegisterClass *RC = RegInfo.intRegClass(VRegSize);
   unsigned VR0 = MRI.createVirtualRegister(RC);
   unsigned VR1 = MRI.createVirtualRegister(RC);
@@ -378,12 +397,12 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
 }
 
 MipsSEFrameLowering::MipsSEFrameLowering(const MipsSubtarget &STI)
-    : MipsFrameLowering(STI, STI.stackAlignment()) {}
+    : MipsFrameLowering(STI, STI.getStackAlignment()) {}
 
 void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
-  MachineFrameInfo *MFI    = MF.getFrameInfo();
+  MachineFrameInfo &MFI    = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
 
   const MipsSEInstrInfo &TII =
@@ -397,39 +416,42 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned SP = ABI.GetStackPtr();
   unsigned FP = ABI.GetFramePtr();
   unsigned ZERO = ABI.GetNullPtr();
-  unsigned MOVE = ABI.GetGPRMoveOp();
+  unsigned MOVE = ABI.GetSPMoveOp();
   unsigned ADDiu = ABI.GetPtrAddiuOp();
   unsigned AND = ABI.IsN64() ? Mips::AND64 : Mips::AND;
+
+  // C0 is always live in.  In non-CHERI MIPS, C0 is treated as a read-only
+  // register that is implicitly read by loads and stores.
+  MBB.addLiveIn(Mips::C0);
 
   const TargetRegisterClass *RC = ABI.ArePtrs64bit() ?
         &Mips::GPR64RegClass : &Mips::GPR32RegClass;
 
   // First, compute final stack size.
-  uint64_t StackSize = MFI->getStackSize();
+  uint64_t StackSize = MFI.getStackSize();
 
   // No need to allocate space on the stack.
-  if (StackSize == 0 && !MFI->adjustsStack()) return;
+  if (StackSize == 0 && !MFI.adjustsStack()) return;
 
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
-  MachineLocation DstML, SrcML;
 
   // Adjust stack.
   TII.adjustStackPtr(SP, -StackSize, MBB, MBBI);
 
   // emit ".cfi_def_cfa_offset StackSize"
-  unsigned CFIIndex = MMI.addFrameInst(
+  unsigned CFIIndex = MF.addFrameInst(
       MCCFIInstruction::createDefCfaOffset(nullptr, -StackSize));
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
-  if (MF.getFunction()->hasFnAttribute("interrupt"))
+  if (MF.getFunction().hasFnAttribute("interrupt"))
     emitInterruptPrologueStub(MF, MBB);
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
   bool IsRASpilled = false;
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
-  if (CSI.size()) {
+  if (!CSI.empty()) {
     // Find the instruction past the last instruction that saves a callee-saved
     // register to the stack.
     for (unsigned i = 0; i < CSI.size(); ++i)
@@ -439,7 +461,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
     // directives.
     for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
            E = CSI.end(); I != E; ++I) {
-      int64_t Offset = MFI->getObjectOffset(I->getFrameIdx());
+      int64_t Offset = MFI.getObjectOffset(I->getFrameIdx());
       unsigned Reg = I->getReg();
       if (Reg == Mips::RA_64 || Reg == Mips::RA)
         IsRASpilled = true;
@@ -455,12 +477,12 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
         if (!STI.isLittle())
           std::swap(Reg0, Reg1);
 
-        unsigned CFIIndex = MMI.addFrameInst(
+        unsigned CFIIndex = MF.addFrameInst(
             MCCFIInstruction::createOffset(nullptr, Reg0, Offset));
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
 
-        CFIIndex = MMI.addFrameInst(
+        CFIIndex = MF.addFrameInst(
             MCCFIInstruction::createOffset(nullptr, Reg1, Offset + 4));
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
@@ -471,19 +493,19 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
         if (!STI.isLittle())
           std::swap(Reg0, Reg1);
 
-        unsigned CFIIndex = MMI.addFrameInst(
+        unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createOffset(nullptr, Reg0, Offset));
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
 
-        CFIIndex = MMI.addFrameInst(
+        CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createOffset(nullptr, Reg1, Offset + 4));
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
       } else {
         // Reg is either in GPR32 or FGR32.
-        unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createOffset(
-            nullptr, MRI->getDwarfRegNum(Reg, 1), Offset));
+        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+            nullptr, MRI->getDwarfRegNum(Reg, true), Offset));
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
       }
@@ -501,9 +523,9 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Emit .cfi_offset directives for eh data registers.
     for (int I = 0; I < 4; ++I) {
-      int64_t Offset = MFI->getObjectOffset(MipsFI->getEhDataRegFI(I));
+      int64_t Offset = MFI.getObjectOffset(MipsFI->getEhDataRegFI(I));
       unsigned Reg = MRI->getDwarfRegNum(ABI.GetEhDataReg(I), true);
-      unsigned CFIIndex = MMI.addFrameInst(
+      unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createOffset(nullptr, Reg, Offset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
@@ -517,7 +539,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
 
     // emit ".cfi_def_cfa_register $fp"
-    unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createDefCfaRegister(
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(
         nullptr, MRI->getDwarfRegNum(FP, true)));
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex);
@@ -526,16 +548,26 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       // addiu $Reg, $zero, -MaxAlignment
       // andi $sp, $sp, $Reg
       unsigned VR = MF.getRegInfo().createVirtualRegister(RC);
-      assert(isInt<16>(MFI->getMaxAlignment()) &&
+      assert(isInt<16>(MFI.getMaxAlignment()) &&
              "Function's alignment size requirement is not supported.");
-      int MaxAlign = - (signed) MFI->getMaxAlignment();
+      int MaxAlign = -(int)MFI.getMaxAlignment();
+      unsigned IntSP = SP;
+      if (ABI.IsCheriPureCap()) {
+        IntSP = MF.getRegInfo().createVirtualRegister(RC);
+        BuildMI(MBB, MBBI, dl, TII.get(Mips::CGetOffset), IntSP).addReg(SP);
+      }
+
 
       BuildMI(MBB, MBBI, dl, TII.get(ADDiu), VR).addReg(ZERO) .addImm(MaxAlign);
-      BuildMI(MBB, MBBI, dl, TII.get(AND), SP).addReg(SP).addReg(VR);
+      BuildMI(MBB, MBBI, dl, TII.get(AND), IntSP).addReg(IntSP).addReg(VR);
+
+      if (ABI.IsCheriPureCap())
+        BuildMI(MBB, MBBI, dl, TII.get(Mips::CSetOffset), SP).addReg(SP)
+          .addReg(IntSP);
 
       if (hasBP(MF)) {
         // move $s7, $sp
-        unsigned BP = STI.isABI_N64() ? Mips::S7_64 : Mips::S7;
+        unsigned BP = ABI.GetBasePtr();
         BuildMI(MBB, MBBI, dl, TII.get(MOVE), BP)
           .addReg(SP)
           .addReg(ZERO);
@@ -560,7 +592,6 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 
 void MipsSEFrameLowering::emitInterruptPrologueStub(
     MachineFunction &MF, MachineBasicBlock &MBB) const {
-
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.begin();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
@@ -572,8 +603,8 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
   // clearing is not provided so reject that configuration.
   if (!STI.hasMips32r2())
     report_fatal_error(
-        "\"interrupt\" attribute is not supported on pre-r2 MIPS or"
-        "Mips16 targets.");
+        "\"interrupt\" attribute is not supported on pre-MIPS32R2 or "
+        "MIPS16 targets.");
 
   // The GP register contains the "user" value, so we cannot perform
   // any gp relative loads until we restore the "kernel" or "system" gp
@@ -585,11 +616,11 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
 
   if (!STI.isABI_O32() || STI.hasMips64())
     report_fatal_error("\"interrupt\" attribute is only supported for the "
-                       "O32 ABI on MIPS32r2+ at the present time.");
+                       "O32 ABI on MIPS32R2+ at the present time.");
 
   // Perform ISR handling like GCC
   StringRef IntKind =
-      MF.getFunction()->getFnAttribute("interrupt").getValueAsString();
+      MF.getFunction().getFnAttribute("interrupt").getValueAsString();
   const TargetRegisterClass *PtrRC = &Mips::GPR32RegClass;
 
   // EIC interrupt handling needs to read the Cause register to disable
@@ -690,7 +721,7 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
 void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  MachineFrameInfo *MFI            = MF.getFrameInfo();
+  MachineFrameInfo &MFI            = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
 
   const MipsSEInstrInfo &TII =
@@ -703,14 +734,17 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
   unsigned SP = ABI.GetStackPtr();
   unsigned FP = ABI.GetFramePtr();
   unsigned ZERO = ABI.GetNullPtr();
-  unsigned MOVE = ABI.GetGPRMoveOp();
+  unsigned MOVE = ABI.GetSPMoveOp();
+
+  // No need to clean up if we didn't allocate space on the stack.
+  if (MFI.getStackSize() == 0 && !MFI.adjustsStack()) return;
 
   // if framepointer enabled, restore the stack pointer.
   if (hasFP(MF)) {
     // Find the first instruction that restores a callee-saved register.
     MachineBasicBlock::iterator I = MBBI;
 
-    for (unsigned i = 0; i < MFI->getCalleeSavedInfo().size(); ++i)
+    for (unsigned i = 0; i < MFI.getCalleeSavedInfo().size(); ++i)
       --I;
 
     // Insert instruction "move $sp, $fp" at this location.
@@ -723,7 +757,7 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
 
     // Find first instruction that restores a callee-saved register.
     MachineBasicBlock::iterator I = MBBI;
-    for (unsigned i = 0; i < MFI->getCalleeSavedInfo().size(); ++i)
+    for (unsigned i = 0; i < MFI.getCalleeSavedInfo().size(); ++i)
       --I;
 
     // Insert instructions that restore eh data registers.
@@ -733,11 +767,11 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  if (MF.getFunction()->hasFnAttribute("interrupt"))
+  if (MF.getFunction().hasFnAttribute("interrupt"))
     emitInterruptEpilogueStub(MF, MBB);
 
   // Get the number of bytes from FrameInfo
-  uint64_t StackSize = MFI->getStackSize();
+  uint64_t StackSize = MFI.getStackSize();
 
   if (!StackSize)
     return;
@@ -750,7 +784,7 @@ bool MipsSEFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
           const TargetRegisterInfo *TRI, std::vector<CalleeSavedInfo> &CSI) const {
   // If we're on CHERI and we're compiling for the compatible ABI, then reserve
   // an extra spill slot for the return capability, if $ra is spilled.
-  if (CHERICFI && STI.isCheri() && !STI.getABI().IsCheriSandbox())
+  if (CHERICFI && STI.isCheri() && !STI.getABI().IsCheriPureCap())
     for (auto &I : CSI)
       if (I.getReg() == Mips::RA_64) {
         CSI.push_back(CalleeSavedInfo(Mips::C16, 0));
@@ -761,7 +795,6 @@ bool MipsSEFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
 
 void MipsSEFrameLowering::emitInterruptEpilogueStub(
     MachineFunction &MF, MachineBasicBlock &MBB) const {
-
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
@@ -790,6 +823,21 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
       .addImm(0);
 }
 
+int MipsSEFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                int FI,
+                                                unsigned &FrameReg) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  MipsABIInfo ABI = STI.getABI();
+
+  if (MFI.isFixedObjectIndex(FI))
+    FrameReg = hasFP(MF) ? ABI.GetFramePtr() : ABI.GetStackPtr();
+  else
+    FrameReg = hasBP(MF) ? ABI.GetBasePtr() : ABI.GetStackPtr();
+
+  return MFI.getObjectOffset(FI) + MFI.getStackSize() -
+         getOffsetOfLocalArea() + MFI.getOffsetAdjustment();
+}
+
 bool MipsSEFrameLowering::
 spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MI,
@@ -799,21 +847,21 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   MachineBasicBlock *EntryBlock = &MF->front();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
 
-  bool IsRetAddrTaken = MF->getFrameInfo()->isReturnAddressTaken();
+  bool IsRetAddrTaken = MF->getFrameInfo().isReturnAddressTaken();
   bool KillRAOnSpill = true;
-  if (STI.isCheri() && !STI.getABI().IsCheriSandbox())
+  if (STI.isCheri() && !STI.getABI().IsCheriPureCap())
     KillRAOnSpill = false;
 
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     // Add the callee-saved register as live-in. Do not add if the register is
     // RA and return address is taken, because it has already been added in
-    // method MipsTargetLowering::LowerRETURNADDR.
+    // method MipsTargetLowering::lowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
     unsigned Reg = CSI[i].getReg();
     bool IsRA = (Reg == Mips::RA || Reg == Mips::RA_64);
-    if (STI.getABI().IsCheriSandbox())
+    if (STI.getABI().IsCheriPureCap())
       IsRA = (Reg == Mips::C17);
     bool IsRAAndRetAddrIsTaken = IsRA && IsRetAddrTaken;
     if (!IsRAAndRetAddrIsTaken)
@@ -824,16 +872,16 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
       BuildMI(MBB, &*MI, MI->getDebugLoc(), TII.get(Mips::CGetPCC), Mips::C16);
       BuildMI(MBB, &*MI, MI->getDebugLoc(), TII.get(Mips::CSetOffset), Mips::C16)
           .addReg(Mips::C16).addReg(Mips::RA_64, RegState::Kill);
-      MachineFrameInfo *MFI = MBB.getParent()->getFrameInfo();
-      MFI->setObjectAlignment(CSI[i].getFrameIdx(), 32);
+      MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
+      MFI.setObjectAlignment(CSI[i].getFrameIdx(), 32);
     }
 
     // ISRs require HI/LO to be spilled into kernel registers to be then
     // spilled to the stack frame.
     bool IsLOHI = (Reg == Mips::LO0 || Reg == Mips::LO0_64 ||
                    Reg == Mips::HI0 || Reg == Mips::HI0_64);
-    const Function *Func = MBB.getParent()->getFunction();
-    if (IsLOHI && Func->hasFnAttribute("interrupt")) {
+    const Function &Func = MBB.getParent()->getFunction();
+    if (IsLOHI && Func.hasFnAttribute("interrupt")) {
       DebugLoc DL = MI->getDebugLoc();
 
       unsigned Op = 0;
@@ -860,14 +908,13 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
 
 bool
 MipsSEFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
-
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   // Reserve call frame if the size of the maximum call frame fits into 16-bit
   // immediate field and there are no variable sized objects on the stack.
   // Make sure the second register scavenger spill slot can be accessed with one
   // instruction.
-  return isInt<16>(MFI->getMaxCallFrameSize() + getStackAlignment()) &&
-    !MFI->hasVarSizedObjects();
+  return isInt<16>(MFI.getMaxCallFrameSize() + getStackAlignment()) &&
+    !MFI.hasVarSizedObjects();
 }
 
 /// Mark \p Reg and all registers aliasing it in the bitset.
@@ -882,10 +929,11 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MipsABIInfo ABI = STI.getABI();
   unsigned FP = ABI.GetFramePtr();
-  unsigned BP = ABI.IsN64() ? Mips::S7_64 : Mips::S7;
+  unsigned BP = ABI.GetBasePtr();
 
   // Mark $fp as used if function has dedicated frame pointer.
   if (hasFP(MF))
@@ -907,16 +955,16 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (ExpandPseudo(MF).expand()) {
     // The spill slot should be half the size of the accumulator. If target is
     // mips64, it should be 64-bit, otherwise it should be 32-bt.
-    const TargetRegisterClass *RC = STI.hasMips64() ?
-      &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-    int FI = MF.getFrameInfo()->CreateStackObject(RC->getSize(),
-                                                  RC->getAlignment(), false);
+    const TargetRegisterClass &RC = STI.hasMips64() ?
+      Mips::GPR64RegClass : Mips::GPR32RegClass;
+    int FI = MF.getFrameInfo().CreateStackObject(TRI->getSpillSize(RC),
+                                                 TRI->getSpillAlignment(RC),
+                                                 false);
     RS->addScavengingFrameIndex(FI);
   }
 
   // Set scavenging frame index if necessary.
-  uint64_t MaxSPOffset = MF.getInfo<MipsFunctionInfo>()->getIncomingArgSize() +
-    estimateStackSize(MF);
+  uint64_t MaxSPOffset = estimateStackSize(MF);
 
   // We will need the emergency spill slot if we have any stack offsets that
   // don't fit in an immediate.  In normal MIPS code, this means a 16-bit
@@ -924,19 +972,25 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // csc / cld, but only 8-bit immediates (plus a 3-bit shift) for c[ls]x
   // instructions for other spills.  The latter only matters if we're using the
   // capability-stack ABI.
+  // XXXAR: no longer true if we have the big immediate CLC enabled
   if (STI.isCheri()) {
-    if (STI.isABI_CheriSandbox()) {
-      if (isInt<11>(MaxSPOffset))
+    if (STI.isABI_CheriPureCap()) {
+      if (isInt<10>(MaxSPOffset))
         return;
     } else if (isInt<15>(MaxSPOffset))
       return;
-  } else if (isInt<16>(MaxSPOffset))
+  }
+  // MSA has a minimum offset of 10 bits signed. If there is a variable
+  // sized object on the stack, the estimation cannot account for it.
+  else if (isIntN(STI.hasMSA() ? 10 : 16, MaxSPOffset) &&
+      !MF.getFrameInfo().hasVarSizedObjects())
     return;
 
-  const TargetRegisterClass *RC =
-      ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-  int FI = MF.getFrameInfo()->CreateStackObject(RC->getSize(),
-                                                RC->getAlignment(), false);
+  const TargetRegisterClass &RC =
+      ABI.ArePtrs64bit() ? Mips::GPR64RegClass : Mips::GPR32RegClass;
+  int FI = MF.getFrameInfo().CreateStackObject(TRI->getSpillSize(RC),
+                                               TRI->getSpillAlignment(RC),
+                                               false);
   RS->addScavengingFrameIndex(FI);
 }
 

@@ -1,17 +1,32 @@
-; RUN: llc -mtriple=x86_64-apple-darwin -print-machineinstrs=expand-isel-pseudos -enable-selectiondag-sp=true %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=SELDAG
-; RUN: llc -mtriple=x86_64-apple-darwin -print-machineinstrs=expand-isel-pseudos -enable-selectiondag-sp=false %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=IR
+; RUN: llc -mtriple=x86_64-apple-darwin -print-machineinstrs=expand-isel-pseudos -enable-selectiondag-sp=true %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=DARWIN-SELDAG
+; RUN: llc -mtriple=x86_64-apple-darwin -print-machineinstrs=expand-isel-pseudos -enable-selectiondag-sp=false %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=DARWIN-IR
+; RUN: llc -mtriple=i386-pc-windows-msvc -print-machineinstrs=expand-isel-pseudos -enable-selectiondag-sp=true %s -o /dev/null 2>&1 | FileCheck %s -check-prefix=MSVC-SELDAG
+; RUN: llc -mtriple=i386-pc-windows-msvc -print-machineinstrs=expand-isel-pseudos -enable-selectiondag-sp=false %s -o /dev/null 2>&1 | FileCheck %s -check-prefix=MSVC-IR
 
-; SELDAG: # Machine code for function test_branch_weights:
-; SELDAG: Successors according to CFG: BB#[[SUCCESS:[0-9]+]](1048575) BB#[[FAILURE:[0-9]+]](1)
-; SELDAG: BB#[[FAILURE]]:
-; SELDAG: CALL64pcrel32 <es:__stack_chk_fail>
-; SELDAG: BB#[[SUCCESS]]:
+; DARWIN-SELDAG: # Machine code for function test_branch_weights:
+; DARWIN-SELDAG: successors: %bb.[[SUCCESS:[0-9]+]](0x7ffff800), %bb.[[FAILURE:[0-9]+]]
+; DARWIN-SELDAG: bb.[[FAILURE]]{{[0-9a-zA-Z_.]+}}:
+; DARWIN-SELDAG: CALL64pcrel32 &__stack_chk_fail
+; DARWIN-SELDAG: bb.[[SUCCESS]]{{[0-9a-zA-Z_.]+}}:
 
-; IR: # Machine code for function test_branch_weights:
-; IR: Successors according to CFG: BB#[[SUCCESS:[0-9]+]](1048575) BB#[[FAILURE:[0-9]+]](1)
-; IR: BB#[[SUCCESS]]:
-; IR: BB#[[FAILURE]]:
-; IR: CALL64pcrel32 <ga:@__stack_chk_fail>
+; DARWIN-IR: # Machine code for function test_branch_weights:
+; DARWIN-IR: successors: %bb.[[SUCCESS:[0-9]+]](0x7fffffff), %bb.[[FAILURE:[0-9]+]]
+; DARWIN-IR: bb.[[SUCCESS]]{{[0-9a-zA-Z_.]+}}:
+; DARWIN-IR: bb.[[FAILURE]]{{[0-9a-zA-Z_.]+}}:
+; DARWIN-IR: CALL64pcrel32 @__stack_chk_fail
+
+; MSVC-SELDAG: # Machine code for function test_branch_weights:
+; MSVC-SELDAG: mem:Volatile LD4[@__security_cookie]
+; MSVC-SELDAG: ST4[FixedStack0]
+; MSVC-SELDAG: LD4[FixedStack0]
+; MSVC-SELDAG: CALLpcrel32 @__security_check_cookie
+
+; MSVC always uses selection DAG now.
+; MSVC-IR: # Machine code for function test_branch_weights:
+; MSVC-IR: mem:Volatile LD4[@__security_cookie]
+; MSVC-IR: ST4[FixedStack0]
+; MSVC-IR: LD4[FixedStack0]
+; MSVC-IR: CALLpcrel32 @__security_check_cookie
 
 define i32 @test_branch_weights(i32 %n) #0 {
 entry:
@@ -33,4 +48,4 @@ declare void @foo2(i32*)
 
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
-attributes #0 = { ssp "stack-protector-buffer-size"="8" }
+attributes #0 = { sspstrong "stack-protector-buffer-size"="8" }

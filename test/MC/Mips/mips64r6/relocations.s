@@ -5,7 +5,7 @@
 #------------------------------------------------------------------------------
 # Check that the assembler can handle the documented syntax for fixups.
 #------------------------------------------------------------------------------
-# CHECK-FIXUP: addiupc $2, bar  # encoding: [0xec,0b01000AAA,A,A]
+# CHECK-FIXUP: lapc    $2, bar  # encoding: [0xec,0b01000AAA,A,A]
 # CHECK-FIXUP:                  #   fixup A - offset: 0,
 # CHECK-FIXUP:                      value: bar, kind: fixup_MIPS_PC19_S2
 # CHECK-FIXUP: beqc     $5, $6, bar # encoding: [0x20,0xa6,A,A]
@@ -28,12 +28,15 @@
 # CHECK-FIXUP:                      value: bar-4, kind: fixup_MIPS_PC26_S2
 # CHECK-FIXUP: aluipc $2, %pcrel_hi(bar)    # encoding: [0xec,0x5f,A,A]
 # CHECK-FIXUP:                              #   fixup A - offset: 0,
-# CHECK-FIXUP:                                  value: bar@PCREL_HI16,
+# CHECK-FIXUP:                                  value: %pcrel_hi(bar),
 # CHECK-FIXUP:                                  kind: fixup_MIPS_PCHI16
 # CHECK-FIXUP: addiu $2, $2, %pcrel_lo(bar) # encoding: [0x24,0x42,A,A]
 # CHECK-FIXUP:                              #   fixup A - offset: 0,
-# CHECK-FIXUP:                                  value: bar@PCREL_LO16,
+# CHECK-FIXUP:                                  value: %pcrel_lo(bar),
 # CHECK-FIXUP:                                  kind: fixup_MIPS_PCLO16
+# CHECK-FIXUP: lapc    $2, bar  # encoding: [0xec,0b01000AAA,A,A]
+# CHECK-FIXUP:                  #   fixup A - offset: 0,
+# CHECK-FIXUP:                      value: bar, kind: fixup_MIPS_PC19_S2
 # CHECK-FIXUP: ldpc    $2, bar  # encoding: [0xec,0b010110AA,A,A]
 # CHECK-FIXUP:                  # fixup A - offset: 0,
 # CHECK-FIXUP:                      value: bar,
@@ -57,9 +60,10 @@
 # CHECK-ELF:     0x18 R_MIPS_PC26_S2/R_MIPS_NONE/R_MIPS_NONE bar 0xFFFFFFFFFFFFFFFC
 # CHECK-ELF:     0x1C R_MIPS_PCHI16/R_MIPS_NONE/R_MIPS_NONE bar 0x0
 # CHECK-ELF:     0x20 R_MIPS_PCLO16/R_MIPS_NONE/R_MIPS_NONE bar 0x0
-# CHECK-ELF:     0x24 R_MIPS_PC18_S3/R_MIPS_NONE/R_MIPS_NONE bar 0x0
-# CHECK-ELF:     0x28 R_MIPS_PC19_S2/R_MIPS_NONE/R_MIPS_NONE bar 0x0
+# CHECK-ELF:     0x24 R_MIPS_PC19_S2/R_MIPS_NONE/R_MIPS_NONE bar 0x0
+# CHECK-ELF:     0x28 R_MIPS_PC18_S3/R_MIPS_NONE/R_MIPS_NONE bar 0x0
 # CHECK-ELF:     0x2C R_MIPS_PC19_S2/R_MIPS_NONE/R_MIPS_NONE bar 0x0
+# CHECK-ELF:     0x30 R_MIPS_PC19_S2/R_MIPS_NONE/R_MIPS_NONE bar 0x0
 # CHECK-ELF: ]
 
   addiupc   $2,bar
@@ -71,6 +75,7 @@
   bc    bar
   aluipc $2, %pcrel_hi(bar)
   addiu  $2, $2, %pcrel_lo(bar)
+  lapc  $2,bar
   ldpc  $2,bar
   lwpc  $2,bar
   lwupc $2,bar

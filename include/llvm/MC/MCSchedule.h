@@ -24,7 +24,7 @@ struct InstrItinerary;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   const char *Name;
 #endif
   unsigned NumUnits; // Number of resource of this kind
@@ -43,6 +43,11 @@ struct MCProcResourceDesc {
   // in the same cycle. This is for in-order cpus, or the in-order portion of
   // an out-of-order cpus.
   int BufferSize;
+
+  // If the resource has sub-units, a pointer to the first element of an array
+  // of `NumUnits` elements containing the ProcResourceIdx of the sub units.
+  // nullptr if the resource does not have sub-units.
+  const unsigned *SubUnitsIdxBegin;
 
   bool operator==(const MCProcResourceDesc &Other) const {
     return NumUnits == Other.NumUnits && SuperIdx == Other.SuperIdx
@@ -102,7 +107,7 @@ struct MCSchedClassDesc {
   static const unsigned short InvalidNumMicroOps = UINT16_MAX;
   static const unsigned short VariantNumMicroOps = UINT16_MAX - 1;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   const char* Name;
 #endif
   unsigned short NumMicroOps;
@@ -165,9 +170,6 @@ struct MCSchedModel {
   static const unsigned DefaultLoopMicroOpBufferSize = 0;
 
   // LoadLatency is the expected latency of load instructions.
-  //
-  // If MinLatency >= 0, this may be overriden for individual load opcodes by
-  // InstrItinerary OperandCycles.
   unsigned LoadLatency;
   static const unsigned DefaultLoadLatency = 4;
 
@@ -175,7 +177,6 @@ struct MCSchedModel {
   // See TargetInstrInfo::isHighLatencyDef().
   // By default, this is set to an arbitrarily high number of cycles
   // likely to have some impact on scheduling heuristics.
-  // If MinLatency >= 0, this may be overriden by InstrItinData OperandCycles.
   unsigned HighLatency;
   static const unsigned DefaultHighLatency = 10;
 

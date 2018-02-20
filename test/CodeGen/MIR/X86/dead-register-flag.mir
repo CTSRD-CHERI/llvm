@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the 'dead' register flags
 # correctly.
 
@@ -18,7 +18,7 @@ name:            foo
 body: |
   ; CHECK: bb.0.body:
   bb.0.body:
-    ; CHECK: %eax = IMUL32rri8 %edi, 11, implicit-def dead %eflags
-    %eax = IMUL32rri8 %edi, 11, implicit-def dead %eflags
-    RETQ %eax
+    ; CHECK: $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
+    $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
+    RETQ $eax
 ...

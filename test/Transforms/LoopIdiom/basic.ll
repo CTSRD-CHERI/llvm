@@ -24,7 +24,30 @@ for.body:                                         ; preds = %bb.nph, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test1(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 %Size, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 %Size, i1 false)
+; CHECK-NOT: store
+}
+
+; Make sure memset is formed for larger than 1 byte stores, and that the
+; alignment of the store is preserved
+define void @test1_i16(i16* align 2 %Base, i64 %Size) nounwind ssp {
+bb.nph:                                           ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %I.0.014 = getelementptr i16, i16* %Base, i64 %indvar
+  store i16 0, i16* %I.0.014, align 2
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+; CHECK-LABEL: @test1_i16(
+; CHECK: %[[BaseBC:.*]] = bitcast i16* %Base to i8*
+; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 1
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 2 %[[BaseBC]], i8 0, i64 %[[Sz]], i1 false)
 ; CHECK-NOT: store
 }
 
@@ -47,7 +70,7 @@ for.body.cont:
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test1a(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 %Size, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 %Size, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -70,7 +93,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-LABEL: @test2(
 ; CHECK: br i1 %cmp10,
 ; CHECK: %0 = shl i64 %Size, 2
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base1, i8 1, i64 %0, i32 4, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 %Base1, i8 1, i64 %0, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -97,8 +120,7 @@ for.end:                                          ; preds = %entry
 ; CHECK: ret void
 }
 
-
-;; TODO: We should be able to promote this memset.  Not yet though.
+; Make sure the first store in the loop is turned into a memset.
 define void @test4(i8* %Base) nounwind ssp {
 bb.nph:                                           ; preds = %entry
   %Base100 = getelementptr i8, i8* %Base, i64 1000
@@ -118,9 +140,8 @@ for.body:                                         ; preds = %bb.nph, %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret void
-; CHECK-TODO-LABEL: @test4(
-; CHECK-TODO: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 100, i32 1, i1 false)
-; CHECK-TODO-NOT: store
+; CHECK-LABEL: @test4(
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 100, i1 false)
 }
 
 ; This can't be promoted: the memset is a store of a loop variant value.
@@ -166,7 +187,59 @@ for.body:                                         ; preds = %bb.nph, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test6(
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %Dest, i8* %Base, i64 %Size, i32 1, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %Dest, i8* align 1 %Base, i64 %Size, i1 false)
+; CHECK-NOT: store
+; CHECK: ret void
+}
+
+;; memcpy formation, check alignment
+define void @test6_dest_align(i32* noalias align 1 %Base, i32* noalias align 4 %Dest, i64 %Size) nounwind ssp {
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %I.0.014 = getelementptr i32, i32* %Base, i64 %indvar
+  %DestI = getelementptr i32, i32* %Dest, i64 %indvar
+  %V = load i32, i32* %I.0.014, align 1
+  store i32 %V, i32* %DestI, align 4
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+; CHECK-LABEL: @test6_dest_align(
+; CHECK: %[[Dst:.*]] = bitcast i32* %Dest to i8*
+; CHECK: %[[Src:.*]] = bitcast i32* %Base to i8*
+; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 2
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %[[Dst]], i8* align 1 %[[Src]], i64 %[[Sz]], i1 false)
+; CHECK-NOT: store
+; CHECK: ret void
+}
+
+;; memcpy formation, check alignment
+define void @test6_src_align(i32* noalias align 4 %Base, i32* noalias align 1 %Dest, i64 %Size) nounwind ssp {
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %I.0.014 = getelementptr i32, i32* %Base, i64 %indvar
+  %DestI = getelementptr i32, i32* %Dest, i64 %indvar
+  %V = load i32, i32* %I.0.014, align 4
+  store i32 %V, i32* %DestI, align 1
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+; CHECK-LABEL: @test6_src_align(
+; CHECK: %[[Dst]] = bitcast i32* %Dest to i8*
+; CHECK: %[[Src]] = bitcast i32* %Base to i8*
+; CHECK: %[[Sz:[0-9]+]] = shl i64 %Size, 2
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %[[Dst]], i8* align 4 %[[Src]], i64 %[[Sz]], i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -191,7 +264,7 @@ for.body.cont:
 for.end:                                          ; preds = %for.body, %entry
   ret void
 ; CHECK-LABEL: @test7(
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 %Size, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %Base, i8 0, i64 %Size, i1 false)
 ; CHECK-NOT: store
 }
 
@@ -276,7 +349,7 @@ for.end13:                                        ; preds = %for.inc10
   ret void
 ; CHECK-LABEL: @test10(
 ; CHECK: entry:
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %X, i8 0, i64 10000, i32 1, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 1 %X, i8 0, i64 10000, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -324,7 +397,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: bitcast
-; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %P1, i8 0, i64 80000, i32 4, i1 false)
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 4 %P1, i8 0, i64 80000, i1 false)
 ; CHECK-NOT: store
 ; CHECK: ret void
 }
@@ -424,3 +497,216 @@ exit:
   ret void
 ; CHECK: ret void
 }
+
+; Recognize loops with a negative stride.
+define void @test15(i32* nocapture %f) {
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 65536, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %f, i64 %indvars.iv
+  store i32 0, i32* %arrayidx, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  %cmp = icmp sgt i64 %indvars.iv, 0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+; CHECK-LABEL: @test15(
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 %f1, i8 0, i64 262148, i1 false)
+; CHECK-NOT: store
+; CHECK: ret void
+}
+
+; Loop with a negative stride.  Verify an aliasing write to f[65536] prevents
+; the creation of a memset.
+define void @test16(i32* nocapture %f) {
+entry:
+  %arrayidx1 = getelementptr inbounds i32, i32* %f, i64 65536
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ 65536, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %f, i64 %indvars.iv
+  store i32 0, i32* %arrayidx, align 4
+  store i32 1, i32* %arrayidx1, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  %cmp = icmp sgt i64 %indvars.iv, 0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+; CHECK-LABEL: @test16(
+; CHECK-NOT: call void @llvm.memset.p0i8.i64
+; CHECK: ret void
+}
+
+; Handle memcpy-able loops with negative stride.
+define noalias i32* @test17(i32* nocapture readonly %a, i32 %c) {
+entry:
+  %conv = sext i32 %c to i64
+  %mul = shl nsw i64 %conv, 2
+  %call = tail call noalias i8* @malloc(i64 %mul)
+  %0 = bitcast i8* %call to i32*
+  %tobool.9 = icmp eq i32 %c, 0
+  br i1 %tobool.9, label %while.end, label %while.body.preheader
+
+while.body.preheader:                             ; preds = %entry
+  br label %while.body
+
+while.body:                                       ; preds = %while.body.preheader, %while.body
+  %dec10.in = phi i32 [ %dec10, %while.body ], [ %c, %while.body.preheader ]
+  %dec10 = add nsw i32 %dec10.in, -1
+  %idxprom = sext i32 %dec10 to i64
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %idxprom
+  %1 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %0, i64 %idxprom
+  store i32 %1, i32* %arrayidx2, align 4
+  %tobool = icmp eq i32 %dec10, 0
+  br i1 %tobool, label %while.end.loopexit, label %while.body
+
+while.end.loopexit:                               ; preds = %while.body
+  br label %while.end
+
+while.end:                                        ; preds = %while.end.loopexit, %entry
+  ret i32* %0
+; CHECK-LABEL: @test17(
+; CHECK: call void @llvm.memcpy
+; CHECK: ret i32*
+}
+
+declare noalias i8* @malloc(i64)
+
+; Handle memcpy-able loops with negative stride.
+; void test18(unsigned *__restrict__ a, unsigned *__restrict__ b) {
+;   for (int i = 2047; i >= 0; --i) {
+;     a[i] = b[i];
+;   }
+; }
+define void @test18(i32* noalias nocapture %a, i32* noalias nocapture readonly %b) #0 {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ 2047, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  store i32 %0, i32* %arrayidx2, align 4
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  %cmp = icmp sgt i64 %indvars.iv, 0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+; CHECK-LABEL: @test18(
+; CHECK: call void @llvm.memcpy
+; CHECK: ret
+}
+
+; Two dimensional nested loop with negative stride should be promoted to one big memset.
+define void @test19(i8* nocapture %X) {
+entry:
+  br label %for.cond1.preheader
+
+for.cond1.preheader:                              ; preds = %entry, %for.inc4
+  %i.06 = phi i32 [ 99, %entry ], [ %dec5, %for.inc4 ]
+  %mul = mul nsw i32 %i.06, 100
+  br label %for.body3
+
+for.body3:                                        ; preds = %for.cond1.preheader, %for.body3
+  %j.05 = phi i32 [ 99, %for.cond1.preheader ], [ %dec, %for.body3 ]
+  %add = add nsw i32 %j.05, %mul
+  %idxprom = sext i32 %add to i64
+  %arrayidx = getelementptr inbounds i8, i8* %X, i64 %idxprom
+  store i8 0, i8* %arrayidx, align 1
+  %dec = add nsw i32 %j.05, -1
+  %cmp2 = icmp sgt i32 %j.05, 0
+  br i1 %cmp2, label %for.body3, label %for.inc4
+
+for.inc4:                                         ; preds = %for.body3
+  %dec5 = add nsw i32 %i.06, -1
+  %cmp = icmp sgt i32 %i.06, 0
+  br i1 %cmp, label %for.cond1.preheader, label %for.end6
+
+for.end6:                                         ; preds = %for.inc4
+  ret void
+; CHECK-LABEL: @test19(
+; CHECK: entry:
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 1 %X, i8 0, i64 10000, i1 false)
+; CHECK: ret void
+}
+
+; Handle loops where the trip count is a narrow integer that needs to be
+; extended.
+define void @form_memset_narrow_size(i64* %ptr, i32 %size) {
+; CHECK-LABEL: @form_memset_narrow_size(
+entry:
+  %cmp1 = icmp sgt i32 %size, 0
+  br i1 %cmp1, label %loop.ph, label %exit
+; CHECK:       entry:
+; CHECK:         %[[C1:.*]] = icmp sgt i32 %size, 0
+; CHECK-NEXT:    br i1 %[[C1]], label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop.body
+; CHECK:       loop.ph:
+; CHECK-NEXT:    %[[ZEXT_SIZE:.*]] = zext i32 %size to i64
+; CHECK-NEXT:    %[[SCALED_SIZE:.*]] = shl i64 %[[ZEXT_SIZE]], 3
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 %{{.*}}, i8 0, i64 %[[SCALED_SIZE]], i1 false)
+
+loop.body:
+  %storemerge4 = phi i32 [ 0, %loop.ph ], [ %inc, %loop.body ]
+  %idxprom = sext i32 %storemerge4 to i64
+  %arrayidx = getelementptr inbounds i64, i64* %ptr, i64 %idxprom
+  store i64 0, i64* %arrayidx, align 8
+  %inc = add nsw i32 %storemerge4, 1
+  %cmp2 = icmp slt i32 %inc, %size
+  br i1 %cmp2, label %loop.body, label %loop.exit
+
+loop.exit:
+  br label %exit
+
+exit:
+  ret void
+}
+
+define void @form_memcpy_narrow_size(i64* noalias %dst, i64* noalias %src, i32 %size) {
+; CHECK-LABEL: @form_memcpy_narrow_size(
+entry:
+  %cmp1 = icmp sgt i32 %size, 0
+  br i1 %cmp1, label %loop.ph, label %exit
+; CHECK:       entry:
+; CHECK:         %[[C1:.*]] = icmp sgt i32 %size, 0
+; CHECK-NEXT:    br i1 %[[C1]], label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop.body
+; CHECK:       loop.ph:
+; CHECK-NEXT:    %[[ZEXT_SIZE:.*]] = zext i32 %size to i64
+; CHECK-NEXT:    %[[SCALED_SIZE:.*]] = shl i64 %[[ZEXT_SIZE]], 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 8 %{{.*}}, i64 %[[SCALED_SIZE]], i1 false)
+
+loop.body:
+  %storemerge4 = phi i32 [ 0, %loop.ph ], [ %inc, %loop.body ]
+  %idxprom1 = sext i32 %storemerge4 to i64
+  %arrayidx1 = getelementptr inbounds i64, i64* %src, i64 %idxprom1
+  %v = load i64, i64* %arrayidx1, align 8
+  %idxprom2 = sext i32 %storemerge4 to i64
+  %arrayidx2 = getelementptr inbounds i64, i64* %dst, i64 %idxprom2
+  store i64 %v, i64* %arrayidx2, align 8
+  %inc = add nsw i32 %storemerge4, 1
+  %cmp2 = icmp slt i32 %inc, %size
+  br i1 %cmp2, label %loop.body, label %loop.exit
+
+loop.exit:
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Validate that "memset_pattern" has the proper attributes.
+; CHECK: declare void @memset_pattern16(i8* nocapture, i8* nocapture readonly, i64) [[ATTRS:#[0-9]+]]
+; CHECK: [[ATTRS]] = { argmemonly }

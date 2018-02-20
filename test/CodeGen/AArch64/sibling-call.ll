@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -aarch64-load-store-opt=0 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -aarch64-enable-ldst-opt=0 | FileCheck %s
 
 declare void @callee_stack0()
 declare void @callee_stack8([8 x i32], i64)
@@ -6,7 +6,7 @@ declare void @callee_stack16([8 x i32], i64, i64)
 
 define void @caller_to0_from0() nounwind {
 ; CHECK-LABEL: caller_to0_from0:
-; CHECK-NEXT: // BB
+; CHECK-NEXT: // %bb.
   tail call void @callee_stack0()
   ret void
 ; CHECK-NEXT: b callee_stack0
@@ -14,7 +14,7 @@ define void @caller_to0_from0() nounwind {
 
 define void @caller_to0_from8([8 x i32], i64) nounwind{
 ; CHECK-LABEL: caller_to0_from8:
-; CHECK-NEXT: // BB
+; CHECK-NEXT: // %bb.
 
   tail call void @callee_stack0()
   ret void
@@ -92,6 +92,6 @@ define void @indirect_tail() {
   tail call void %fptr(i32 42)
   ret void
 ; CHECK: ldr [[FPTR:x[1-9]+]], [{{x[0-9]+}}, {{#?}}:lo12:func]
-; CHECK: movz w0, #{{42|0x2a}}
+; CHECK: mov w0, #{{42|0x2a}}
 ; CHECK: br [[FPTR]]
 }

@@ -4,11 +4,11 @@
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -20,30 +20,33 @@ using namespace llvm;
 
 namespace {
 class CheriInvalidatePass : public MachineFunctionPass {
-  const MipsInstrInfo *InstrInfo;
+  const MipsInstrInfo *InstrInfo = nullptr;
   SmallVector<MachineInstr *, 16> StackStores;
   SmallVector<MachineInstr *, 4> Returns;
 
 public:
   static char ID;
-  CheriInvalidatePass(MipsTargetMachine &TM) : MachineFunctionPass(ID) {
-    InstrInfo = TM.getSubtargetImpl()->getInstrInfo();
-  }
+  CheriInvalidatePass() : MachineFunctionPass(ID) {}
 
   void runOnMachineBasicBlock(MachineBasicBlock &MBB) {
+    if (!InstrInfo)
+      InstrInfo = MBB.getParent()->getSubtarget<MipsSubtarget>().getInstrInfo();
     for (MachineBasicBlock::iterator I = MBB.instr_begin();
          I != MBB.instr_end(); ++I) {
       int FI;
-      MachineInstr *Inst = I;
-      if (InstrInfo->isStoreToStackSlot(I, FI)) {
-        StackStores.push_back(Inst);
+      MachineInstr &Inst = *I;
+      if (InstrInfo->isStoreToStackSlot(Inst, FI)) {
+        StackStores.push_back(&Inst);
       } else if (I->isReturn()) {
-        Returns.push_back(I);
+        Returns.push_back(&Inst);
       }
     }
   }
 
   virtual bool runOnMachineFunction(MachineFunction &F) {
+    if (!InstrInfo)
+      InstrInfo = F.getSubtarget<MipsSubtarget>().getInstrInfo();
+
 // Metadata nodes are no longer allowed to refer to functions, so we need
 // another mechanism for identifying them.  We should do it properly by adding
 // a function attribute.
@@ -118,6 +121,6 @@ public:
 
 char CheriInvalidatePass::ID;
 
-FunctionPass *llvm::createCheriInvalidatePass(MipsTargetMachine &TM) {
-  return new CheriInvalidatePass(TM);
+FunctionPass *llvm::createCheriInvalidatePass() {
+  return new CheriInvalidatePass();
 }

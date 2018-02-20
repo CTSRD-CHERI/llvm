@@ -1,8 +1,8 @@
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=ARM
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -verify-machineinstrs | FileCheck %s --check-prefix=ARM
+; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=ARM --check-prefix=ARM-MACHO
+; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -verify-machineinstrs | FileCheck %s --check-prefix=ARM --check-prefix=ARM-ELF
 ; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=THUMB
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=ARM-LONG
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=ARM-LONG
+; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO
+; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-ELF
 ; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=+long-calls -verify-machineinstrs | FileCheck %s --check-prefix=THUMB-LONG
 
 ; Note that some of these tests assume that relocations are either
@@ -22,9 +22,14 @@ define void @t1() nounwind ssp {
 ; ARM: and r1, r1, #255
 ; ARM: bl {{_?}}memset
 ; ARM-LONG-LABEL: t1:
-; ARM-LONG: {{(movw r3, :lower16:L_memset\$non_lazy_ptr)|(ldr r3, .LCPI)}}
-; ARM-LONG: {{(movt r3, :upper16:L_memset\$non_lazy_ptr)?}}
-; ARM-LONG: ldr r3, [r3]
+
+; ARM-LONG-MACHO: {{(movw r3, :lower16:L_memset\$non_lazy_ptr)|(ldr r3, .LCPI)}}
+; ARM-LONG-MACHO: {{(movt r3, :upper16:L_memset\$non_lazy_ptr)?}}
+; ARM-LONG-MACHO: ldr r3, [r3]
+
+; ARM-LONG-ELF: movw r3, :lower16:memset
+; ARM-LONG-ELF: movt r3, :upper16:memset
+
 ; ARM-LONG: blx r3
 ; THUMB-LABEL: t1:
 ; THUMB: {{(movw r0, :lower16:_?message1)|(ldr.n r0, .LCPI)}}
@@ -39,17 +44,22 @@ define void @t1() nounwind ssp {
 ; THUMB-LONG: movt r3, :upper16:L_memset$non_lazy_ptr
 ; THUMB-LONG: ldr r3, [r3]
 ; THUMB-LONG: blx r3
-  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @message1, i32 0, i32 5), i8 64, i32 10, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 getelementptr inbounds ([60 x i8], [60 x i8]* @message1, i32 0, i32 5), i8 64, i32 10, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
 
 define void @t2() nounwind ssp {
 ; ARM-LABEL: t2:
-; ARM: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
-; ARM: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
-; ARM: ldr r0, [r0]
+
+; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
+; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
+; ARM-MACHO: ldr r0, [r0]
+
+; ARM-ELF: movw r0, :lower16:temp
+; ARM-ELF: movt r0, :upper16:temp
+
 ; ARM: add r1, r0, #4
 ; ARM: add r0, r0, #16
 ; ARM: movw r2, #17
@@ -58,9 +68,14 @@ define void @t2() nounwind ssp {
 ; ARM: ldr r1, [sp[[SLOT]]] @ 4-byte Reload
 ; ARM: bl {{_?}}memcpy
 ; ARM-LONG-LABEL: t2:
-; ARM-LONG: {{(movw r3, :lower16:L_memcpy\$non_lazy_ptr)|(ldr r3, .LCPI)}}
-; ARM-LONG: {{(movt r3, :upper16:L_memcpy\$non_lazy_ptr)?}}
-; ARM-LONG: ldr r3, [r3]
+
+; ARM-LONG-MACHO: {{(movw r3, :lower16:L_memcpy\$non_lazy_ptr)|(ldr r3, .LCPI)}}
+; ARM-LONG-MACHO: {{(movt r3, :upper16:L_memcpy\$non_lazy_ptr)?}}
+; ARM-LONG-MACHO: ldr r3, [r3]
+
+; ARM-LONG-ELF: movw r3, :lower16:memcpy
+; ARM-LONG-ELF: movt r3, :upper16:memcpy
+
 ; ARM-LONG: blx r3
 ; THUMB-LABEL: t2:
 ; THUMB: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr.n r0, .LCPI)}}
@@ -78,26 +93,37 @@ define void @t2() nounwind ssp {
 ; THUMB-LONG: movt r3, :upper16:L_memcpy$non_lazy_ptr
 ; THUMB-LONG: ldr r3, [r3]
 ; THUMB-LONG: blx r3
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 17, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* align 4 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 17, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
 define void @t3() nounwind ssp {
 ; ARM-LABEL: t3:
-; ARM: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
-; ARM: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
-; ARM: ldr r0, [r0]
+
+; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
+; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
+; ARM-MACHO: ldr r0, [r0]
+
+; ARM-ELF: movw r0, :lower16:temp
+; ARM-ELF: movt r0, :upper16:temp
+
+
 ; ARM: add r1, r0, #4
 ; ARM: add r0, r0, #16
 ; ARM: movw r2, #10
 ; ARM: mov r0, r1
 ; ARM: bl {{_?}}memmove
 ; ARM-LONG-LABEL: t3:
-; ARM-LONG: {{(movw r3, :lower16:L_memmove\$non_lazy_ptr)|(ldr r3, .LCPI)}}
-; ARM-LONG: {{(movt r3, :upper16:L_memmove\$non_lazy_ptr)?}}
-; ARM-LONG: ldr r3, [r3]
+
+; ARM-LONG-MACHO: {{(movw r3, :lower16:L_memmove\$non_lazy_ptr)|(ldr r3, .LCPI)}}
+; ARM-LONG-MACHO: {{(movt r3, :upper16:L_memmove\$non_lazy_ptr)?}}
+; ARM-LONG-MACHO: ldr r3, [r3]
+
+; ARM-LONG-ELF: movw r3, :lower16:memmove
+; ARM-LONG-ELF: movt r3, :upper16:memmove
+
 ; ARM-LONG: blx r3
 ; THUMB-LABEL: t3:
 ; THUMB: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr.n r0, .LCPI)}}
@@ -115,15 +141,20 @@ define void @t3() nounwind ssp {
 ; THUMB-LONG: movt r3, :upper16:L_memmove$non_lazy_ptr
 ; THUMB-LONG: ldr r3, [r3]
 ; THUMB-LONG: blx r3
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 10, i32 1, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* align 1 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* align 1 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 10, i1 false)
   ret void
 }
 
 define void @t4() nounwind ssp {
 ; ARM-LABEL: t4:
-; ARM: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
-; ARM: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
-; ARM: ldr r0, [r0]
+
+; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
+; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
+; ARM-MACHO: ldr r0, [r0]
+
+; ARM-ELF: movw r0, :lower16:temp
+; ARM-ELF: movt r0, :upper16:temp
+
 ; ARM: ldr r1, [r0, #16]
 ; ARM: str r1, [r0, #4]
 ; ARM: ldr r1, [r0, #20]
@@ -142,17 +173,22 @@ define void @t4() nounwind ssp {
 ; THUMB: ldrh r1, [r0, #24]
 ; THUMB: strh r1, [r0, #12]
 ; THUMB: bx lr
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 10, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* align 4 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 10, i1 false)
   ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
 define void @t5() nounwind ssp {
 ; ARM-LABEL: t5:
-; ARM: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
-; ARM: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
-; ARM: ldr r0, [r0]
+
+; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
+; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
+; ARM-MACHO: ldr r0, [r0]
+
+; ARM-ELF: movw r0, :lower16:temp
+; ARM-ELF: movt r0, :upper16:temp
+
 ; ARM: ldrh r1, [r0, #16]
 ; ARM: strh r1, [r0, #4]
 ; ARM: ldrh r1, [r0, #18]
@@ -179,15 +215,20 @@ define void @t5() nounwind ssp {
 ; THUMB: ldrh r1, [r0, #24]
 ; THUMB: strh r1, [r0, #12]
 ; THUMB: bx lr
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 10, i32 2, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 2 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* align 2 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 10, i1 false)
   ret void
 }
 
 define void @t6() nounwind ssp {
 ; ARM-LABEL: t6:
-; ARM: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
-; ARM: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
-; ARM: ldr r0, [r0]
+
+; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
+; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
+; ARM-MACHO: ldr r0, [r0]
+
+; ARM-ELF: movw r0, :lower16:temp
+; ARM-ELF: movt r0, :upper16:temp
+
 ; ARM: ldrb r1, [r0, #16]
 ; ARM: strb r1, [r0, #4]
 ; ARM: ldrb r1, [r0, #17]
@@ -234,14 +275,14 @@ define void @t6() nounwind ssp {
 ; THUMB: ldrb r1, [r0, #25]
 ; THUMB: strb r1, [r0, #13]
 ; THUMB: bx lr
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 10, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* align 1 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 10, i1 false)
   ret void
 }
 
 ; rdar://13202135
 define void @t7() nounwind ssp {
 ; Just make sure this doesn't assert when we have an odd length and an alignment of 2.
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 3, i32 2, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 2 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 4), i8* align 2 getelementptr inbounds ([60 x i8], [60 x i8]* @temp, i32 0, i32 16), i32 3, i1 false)
   ret void
 }
 

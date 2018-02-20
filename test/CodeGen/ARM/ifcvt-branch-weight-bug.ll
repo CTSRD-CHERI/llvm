@@ -14,15 +14,15 @@ entry:
   br i1 undef, label %for.end, label %for.body
 
 ; Before if conversion, we have
-; for.body -> lor.lhs.false.i (62)
-;          -> for.cond.backedge (62)
-; lor.lhs.false.i -> for.cond.backedge (1048575)
-;                 -> cond.false.i (1)
+; for.body -> lor.lhs.false.i (50%)
+;          -> for.cond.backedge (50%)
+; lor.lhs.false.i -> for.cond.backedge (100%)
+;                 -> cond.false.i (0%)
 ; Afer if conversion, we have
-; for.body -> for.cond.backedge (130023362)
-;          -> cond.false.i (62)
-; CHECK: BB#1: derived from LLVM BB %for.body
-; CHECK: Successors according to CFG: BB#2(130023362) BB#4(62)
+; for.body -> for.cond.backedge (100%)
+;          -> cond.false.i (0%)
+; CHECK: bb.1.for.body:
+; CHECK: successors: %bb.2(0x80000000), %bb.4(0x00000001)
 for.body:
   br i1 undef, label %for.cond.backedge, label %lor.lhs.false.i, !prof !1
 

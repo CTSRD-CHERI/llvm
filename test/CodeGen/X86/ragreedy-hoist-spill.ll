@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx -regalloc=greedy | FileCheck %s
 
-; This testing case is reduced from 254.gap SyFgets funciton.
-; We make sure a spill is not hoisted to a hotter outer loop.
+; This testing case is reduced from 254.gap SyFgets function.
+; We make sure a spill is hoisted to a cold BB inside the hotter outer loop.
 
 %struct.TMP.1 = type { %struct.TMP.2*, %struct.TMP.2*, [1024 x i8] }
 %struct.TMP.2 = type { i8*, i32, i32, i16, i16, %struct.TMP.3, i32, i8*, i32 (i8*)*, i32 (i8*, i8*, i32)*, i64 (i8*, i64, i32)*, i32 (i8*, i8*, i32)*, %struct.TMP.3, %struct.TMP.4*, i32, [3 x i8], [1 x i8], %struct.TMP.3, i32, i64 }
@@ -63,7 +63,7 @@ SyTime.exit2720:
   br i1 %cmp293427, label %for.body.lr.ph, label %while.body.preheader
 
 for.body.lr.ph:
-  call void @llvm.memset.p0i8.i64(i8* undef, i8 32, i64 512, i32 16, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 16 undef, i8 32, i64 512, i1 false)
   br label %while.body.preheader
 
 while.body.preheader:
@@ -177,6 +177,10 @@ for.cond357:
   br label %for.cond357
 
 sw.bb474:
+  ; CHECK: sw.bb474
+  ; spill is hoisted here. Although loop depth1 is even hotter than loop depth2, sw.bb474 is still cold.
+  ; CHECK: movq %r{{.*}}, {{[0-9]+}}(%rsp)
+  ; CHECK: land.rhs485
   %cmp476 = icmp eq i8 undef, 0
   br i1 %cmp476, label %if.end517, label %do.body479.preheader
 
@@ -200,8 +204,8 @@ land.lhs.true490:
 
 lor.rhs500:
   ; CHECK: lor.rhs500
-  ; Make sure that we don't hoist the spill to outer loops.
-  ; CHECK: movq %r{{.*}}, {{[0-9]+}}(%rsp)
+  ; Make sure spill is hoisted to a cold preheader in outside loop.
+  ; CHECK-NOT: movq %r{{.*}}, {{[0-9]+}}(%rsp)
   ; CHECK: callq {{.*}}maskrune
   %call3.i.i2792 = call i32 @__maskrune(i32 undef, i64 256)
   br i1 undef, label %land.lhs.true504, label %do.body479.backedge
@@ -373,7 +377,7 @@ cleanup:
 declare i32 @fileno(%struct.TMP.2* nocapture)
 declare i64 @"\01_write"(i32, i8*, i64)
 declare i32 @__maskrune(i32, i64)
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 
 !llvm.ident = !{!0}
 

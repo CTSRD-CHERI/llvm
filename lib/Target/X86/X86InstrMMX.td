@@ -90,11 +90,21 @@ def MMX_CVT_PS_ITINS : OpndItins<
 >;
 }
 
+// Alias instruction that maps zero vector to pxor mmx.
+// This is expanded by ExpandPostRAPseudos to an pxor.
+// We set canFoldAsLoad because this can be converted to a constant-pool
+// load of an all-zeros value if folding it would be beneficial.
+let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
+    isPseudo = 1, SchedRW = [WriteZero] in {
+def MMX_SET0 : I<0, Pseudo, (outs VR64:$dst), (ins), "", []>;
+}
+
 let Constraints = "$src1 = $dst" in {
   // MMXI_binop_rm_int - Simple MMX binary operator based on intrinsic.
   // When this is cleaned up, remove the FIXME from X86RecognizableInstr.cpp.
   multiclass MMXI_binop_rm_int<bits<8> opc, string OpcodeStr, Intrinsic IntId,
-                               OpndItins itins, bit Commutable = 0> {
+                               OpndItins itins, bit Commutable = 0,
+                               X86MemOperand OType = i64mem> {
     def irr : MMXI<opc, MRMSrcReg, (outs VR64:$dst),
                  (ins VR64:$src1, VR64:$src2),
                  !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
@@ -103,7 +113,7 @@ let Constraints = "$src1 = $dst" in {
       let isCommutable = Commutable;
     }
     def irm : MMXI<opc, MRMSrcMem, (outs VR64:$dst),
-                 (ins VR64:$src1, i64mem:$src2),
+                 (ins VR64:$src1, OType:$src2),
                  !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
                  [(set VR64:$dst, (IntId VR64:$src1,
                                    (bitconvert (load_mmx addr:$src2))))],
@@ -135,46 +145,47 @@ let Constraints = "$src1 = $dst" in {
 /// Unary MMX instructions requiring SSSE3.
 multiclass SS3I_unop_rm_int_mm<bits<8> opc, string OpcodeStr,
                                Intrinsic IntId64, OpndItins itins> {
-  def rr64 : MMXSS38I<opc, MRMSrcReg, (outs VR64:$dst), (ins VR64:$src),
-                   !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                   [(set VR64:$dst, (IntId64 VR64:$src))], itins.rr>,
-             Sched<[itins.Sched]>;
+  def rr : MMXSS38I<opc, MRMSrcReg, (outs VR64:$dst), (ins VR64:$src),
+                 !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
+                 [(set VR64:$dst, (IntId64 VR64:$src))], itins.rr>,
+           Sched<[itins.Sched]>;
 
-  def rm64 : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst), (ins i64mem:$src),
-                   !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                   [(set VR64:$dst,
-                     (IntId64 (bitconvert (memopmmx addr:$src))))],
-                   itins.rm>, Sched<[itins.Sched.Folded]>;
+  def rm : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst), (ins i64mem:$src),
+                 !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
+                 [(set VR64:$dst,
+                   (IntId64 (bitconvert (load_mmx addr:$src))))],
+                 itins.rm>, Sched<[itins.Sched.Folded]>;
 }
 
 /// Binary MMX instructions requiring SSSE3.
 let ImmT = NoImm, Constraints = "$src1 = $dst" in {
 multiclass SS3I_binop_rm_int_mm<bits<8> opc, string OpcodeStr,
-                             Intrinsic IntId64, OpndItins itins> {
-  let isCommutable = 0 in
-  def rr64 : MMXSS38I<opc, MRMSrcReg, (outs VR64:$dst),
+                             Intrinsic IntId64, OpndItins itins,
+                             bit Commutable = 0> {
+  let isCommutable = Commutable in
+  def rr : MMXSS38I<opc, MRMSrcReg, (outs VR64:$dst),
        (ins VR64:$src1, VR64:$src2),
         !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
        [(set VR64:$dst, (IntId64 VR64:$src1, VR64:$src2))], itins.rr>,
       Sched<[itins.Sched]>;
-  def rm64 : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst),
+  def rm : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst),
        (ins VR64:$src1, i64mem:$src2),
         !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
        [(set VR64:$dst,
          (IntId64 VR64:$src1,
-          (bitconvert (memopmmx addr:$src2))))], itins.rm>,
+          (bitconvert (load_mmx addr:$src2))))], itins.rm>,
       Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 }
 
 /// PALIGN MMX instructions (require SSSE3).
 multiclass ssse3_palign_mm<string asm, Intrinsic IntId> {
-  def R64irr  : MMXSS3AI<0x0F, MRMSrcReg, (outs VR64:$dst),
+  def rri  : MMXSS3AI<0x0F, MRMSrcReg, (outs VR64:$dst),
       (ins VR64:$src1, VR64:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
       [(set VR64:$dst, (IntId VR64:$src1, VR64:$src2, (i8 imm:$src3)))]>,
       Sched<[WriteShuffle]>;
-  def R64irm  : MMXSS3AI<0x0F, MRMSrcMem, (outs VR64:$dst),
+  def rmi  : MMXSS3AI<0x0F, MRMSrcMem, (outs VR64:$dst),
       (ins VR64:$src1, i64mem:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
       [(set VR64:$dst, (IntId VR64:$src1,
@@ -210,6 +221,8 @@ multiclass sse12_cvt_pint_3addr<bits<8> opc, RegisterClass SrcRC,
 // MMX EMMS Instruction
 //===----------------------------------------------------------------------===//
 
+// FIXME: Is there a better scheduler class for EMMS/FEMMS?
+let SchedRW = [WriteMicrocoded] in
 def MMX_EMMS  : MMXI<0x77, RawFrm, (outs), (ins), "emms",
                      [(int_x86_mmx_emms)], IIC_MMX_EMMS>;
 
@@ -233,9 +246,12 @@ let Predicates = [HasMMX] in {
   let AddedComplexity = 15 in
     def : Pat<(x86mmx (MMX_X86movw2d GR32:$src)),
               (MMX_MOVD64rr GR32:$src)>;
-  let AddedComplexity = 20 in
+  let AddedComplexity = 20 in {
+    def : Pat<(x86mmx (MMX_X86movw2d (i32 0))),
+              (MMX_SET0)>;
     def : Pat<(x86mmx (MMX_X86movw2d (loadi32 addr:$src))),
               (MMX_MOVD64rm addr:$src)>;
+  }
 }
 
 let mayStore = 1 in
@@ -247,17 +263,18 @@ def MMX_MOVD64grr : MMXI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR64:$src),
                          "movd\t{$src, $dst|$dst, $src}",
                          [(set GR32:$dst,
                           (MMX_X86movd2w (x86mmx VR64:$src)))],
-                          IIC_MMX_MOV_REG_MM>, Sched<[WriteMove]>;
+                          IIC_MMX_MOV_REG_MM>, Sched<[WriteMove]>,
+                          FoldGenData<"MMX_MOVD64rr">;
 
 let isBitcast = 1 in
 def MMX_MOVD64to64rr : MMXRI<0x6E, MRMSrcReg, (outs VR64:$dst), (ins GR64:$src),
-                             "movd\t{$src, $dst|$dst, $src}",
+                             "movq\t{$src, $dst|$dst, $src}",
                              [(set VR64:$dst, (bitconvert GR64:$src))],
                              IIC_MMX_MOV_MM_RM>, Sched<[WriteMove]>;
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayLoad = 1 in
 def MMX_MOVD64to64rm : MMXRI<0x6E, MRMSrcMem, (outs VR64:$dst),
-                             (ins i64mem:$src), "movd\t{$src, $dst|$dst, $src}",
+                             (ins i64mem:$src), "movq\t{$src, $dst|$dst, $src}",
                              [], IIC_MMX_MOVQ_RM>, Sched<[WriteLoad]>;
 
 // These are 64 bit moves, but since the OS X assembler doesn't
@@ -266,7 +283,7 @@ def MMX_MOVD64to64rm : MMXRI<0x6E, MRMSrcMem, (outs VR64:$dst),
 let SchedRW = [WriteMove], isBitcast = 1 in {
 def MMX_MOVD64from64rr : MMXRI<0x7E, MRMDestReg,
                                (outs GR64:$dst), (ins VR64:$src),
-                               "movd\t{$src, $dst|$dst, $src}",
+                               "movq\t{$src, $dst|$dst, $src}",
                              [(set GR64:$dst,
                               (bitconvert VR64:$src))], IIC_MMX_MOV_REG_MM>;
 let hasSideEffects = 0 in
@@ -276,14 +293,14 @@ def MMX_MOVQ64rr : MMXI<0x6F, MRMSrcReg, (outs VR64:$dst), (ins VR64:$src),
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
 def MMX_MOVQ64rr_REV : MMXI<0x7F, MRMDestReg, (outs VR64:$dst), (ins VR64:$src),
                         "movq\t{$src, $dst|$dst, $src}", [],
-                        IIC_MMX_MOVQ_RR>;
+                        IIC_MMX_MOVQ_RR>, FoldGenData<"MMX_MOVQ64rr">;
 }
 } // SchedRW
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
 def MMX_MOVD64from64rm : MMXRI<0x7E, MRMDestMem,
-                               (outs i64mem:$dst), (ins VR64:$src),
-                               "movd\t{$src, $dst|$dst, $src}",
+                               (outs), (ins i64mem:$dst, VR64:$src),
+                               "movq\t{$src, $dst|$dst, $src}",
                                [], IIC_MMX_MOV_REG_MM>, Sched<[WriteStore]>;
 
 let SchedRW = [WriteLoad] in {
@@ -293,6 +310,7 @@ def MMX_MOVQ64rm : MMXI<0x6F, MRMSrcMem, (outs VR64:$dst), (ins i64mem:$src),
                         [(set VR64:$dst, (load_mmx addr:$src))],
                         IIC_MMX_MOVQ_RM>;
 } // SchedRW
+
 let SchedRW = [WriteStore] in
 def MMX_MOVQ64mr : MMXI<0x7F, MRMDestMem, (outs), (ins i64mem:$dst, VR64:$src),
                         "movq\t{$src, $dst|$dst, $src}",
@@ -304,7 +322,7 @@ def MMX_MOVDQ2Qrr : MMXSDIi8<0xD6, MRMSrcReg, (outs VR64:$dst),
                              (ins VR128:$src), "movdq2q\t{$src, $dst|$dst, $src}",
                              [(set VR64:$dst,
                                (x86mmx (bitconvert
-                               (i64 (vector_extract (v2i64 VR128:$src),
+                               (i64 (extractelt (v2i64 VR128:$src),
                                      (iPTR 0))))))],
                              IIC_MMX_MOVQ_RR>;
 
@@ -327,6 +345,7 @@ def MMX_MOVFR642Qrr: MMXSDIi8<0xD6, MRMSrcReg, (outs VR64:$dst),
 }
 } // SchedRW
 
+let Predicates = [HasSSE1] in
 def MMX_MOVNTQmr  : MMXI<0xE7, MRMDestMem, (outs), (ins i64mem:$dst, VR64:$src),
                          "movntq\t{$src, $dst|$dst, $src}",
                          [(int_x86_mmx_movnt_dq addr:$dst, VR64:$src)],
@@ -356,6 +375,7 @@ defm MMX_PADDW : MMXI_binop_rm_int<0xFD, "paddw", int_x86_mmx_padd_w,
                                    MMX_INTALU_ITINS, 1>;
 defm MMX_PADDD : MMXI_binop_rm_int<0xFE, "paddd", int_x86_mmx_padd_d,
                                    MMX_INTALU_ITINS, 1>;
+let Predicates = [HasSSE2] in
 defm MMX_PADDQ : MMXI_binop_rm_int<0xD4, "paddq", int_x86_mmx_padd_q,
                                    MMX_INTALUQ_ITINS, 1>;
 defm MMX_PADDSB  : MMXI_binop_rm_int<0xEC, "paddsb" , int_x86_mmx_padds_b,
@@ -370,11 +390,10 @@ defm MMX_PADDUSW : MMXI_binop_rm_int<0xDD, "paddusw", int_x86_mmx_paddus_w,
 
 defm MMX_PHADDW  : SS3I_binop_rm_int_mm<0x01, "phaddw", int_x86_ssse3_phadd_w,
                                    MMX_PHADDSUBW>;
-defm MMX_PHADD   : SS3I_binop_rm_int_mm<0x02, "phaddd", int_x86_ssse3_phadd_d,
+defm MMX_PHADDD  : SS3I_binop_rm_int_mm<0x02, "phaddd", int_x86_ssse3_phadd_d,
                                    MMX_PHADDSUBD>;
 defm MMX_PHADDSW : SS3I_binop_rm_int_mm<0x03, "phaddsw",int_x86_ssse3_phadd_sw,
                                    MMX_PHADDSUBW>;
-
 
 // -- Subtraction
 defm MMX_PSUBB : MMXI_binop_rm_int<0xF8, "psubb", int_x86_mmx_psub_b,
@@ -383,6 +402,7 @@ defm MMX_PSUBW : MMXI_binop_rm_int<0xF9, "psubw", int_x86_mmx_psub_w,
                                    MMX_INTALU_ITINS>;
 defm MMX_PSUBD : MMXI_binop_rm_int<0xFA, "psubd", int_x86_mmx_psub_d,
                                    MMX_INTALU_ITINS>;
+let Predicates = [HasSSE2] in
 defm MMX_PSUBQ : MMXI_binop_rm_int<0xFB, "psubq", int_x86_mmx_psub_q,
                                    MMX_INTALUQ_ITINS>;
 
@@ -409,13 +429,15 @@ defm MMX_PMULLW  : MMXI_binop_rm_int<0xD5, "pmullw", int_x86_mmx_pmull_w,
 
 defm MMX_PMULHW  : MMXI_binop_rm_int<0xE5, "pmulhw",  int_x86_mmx_pmulh_w,
                                      MMX_PMUL_ITINS, 1>;
+let Predicates = [HasSSE1] in
 defm MMX_PMULHUW : MMXI_binop_rm_int<0xE4, "pmulhuw", int_x86_mmx_pmulhu_w,
                                      MMX_PMUL_ITINS, 1>;
+let Predicates = [HasSSE2] in
 defm MMX_PMULUDQ : MMXI_binop_rm_int<0xF4, "pmuludq", int_x86_mmx_pmulu_dq,
                                      MMX_PMUL_ITINS, 1>;
-let isCommutable = 1 in
 defm MMX_PMULHRSW : SS3I_binop_rm_int_mm<0x0B, "pmulhrsw",
-                                     int_x86_ssse3_pmul_hr_sw, MMX_PMUL_ITINS>;
+                                     int_x86_ssse3_pmul_hr_sw,
+                                     MMX_PMUL_ITINS, 1>;
 
 // -- Miscellanea
 defm MMX_PMADDWD : MMXI_binop_rm_int<0xF5, "pmaddwd", int_x86_mmx_pmadd_wd,
@@ -423,6 +445,7 @@ defm MMX_PMADDWD : MMXI_binop_rm_int<0xF5, "pmaddwd", int_x86_mmx_pmadd_wd,
 
 defm MMX_PMADDUBSW : SS3I_binop_rm_int_mm<0x04, "pmaddubsw",
                                      int_x86_ssse3_pmadd_ub_sw, MMX_PMUL_ITINS>;
+let Predicates = [HasSSE1] in {
 defm MMX_PAVGB   : MMXI_binop_rm_int<0xE0, "pavgb", int_x86_mmx_pavg_b,
                                      MMX_MISC_FUNC_ITINS, 1>;
 defm MMX_PAVGW   : MMXI_binop_rm_int<0xE3, "pavgw", int_x86_mmx_pavg_w,
@@ -440,6 +463,7 @@ defm MMX_PMAXSW  : MMXI_binop_rm_int<0xEE, "pmaxsw", int_x86_mmx_pmaxs_w,
 
 defm MMX_PSADBW  : MMXI_binop_rm_int<0xF6, "psadbw", int_x86_mmx_psad_bw,
                                      MMX_PSADBW_ITINS, 1>;
+}
 
 defm MMX_PSIGNB :  SS3I_binop_rm_int_mm<0x08, "psignb", int_x86_ssse3_psign_b,
                                         MMX_MISC_FUNC_ITINS>;
@@ -448,7 +472,7 @@ defm MMX_PSIGNW :  SS3I_binop_rm_int_mm<0x09, "psignw", int_x86_ssse3_psign_w,
 defm MMX_PSIGND :  SS3I_binop_rm_int_mm<0x0A, "psignd", int_x86_ssse3_psign_d,
                                         MMX_MISC_FUNC_ITINS>;
 let Constraints = "$src1 = $dst" in
-  defm MMX_PALIGN : ssse3_palign_mm<"palignr", int_x86_mmx_palignr_b>;
+  defm MMX_PALIGNR : ssse3_palign_mm<"palignr", int_x86_mmx_palignr_b>;
 
 // Logical Instructions
 defm MMX_PAND : MMXI_binop_rm_int<0xDB, "pand", int_x86_mmx_pand,
@@ -471,13 +495,6 @@ defm MMX_PSRLQ : MMXI_binop_rmi_int<0xD3, 0x73, MRM2r, "psrlq",
                                     int_x86_mmx_psrl_q, int_x86_mmx_psrli_q,
                                     MMX_SHIFT_ITINS>;
 
-def : Pat<(int_x86_mmx_psrl_w VR64:$src1, (load_mvmmx addr:$src2)),
-          (MMX_PSRLWrm VR64:$src1, addr:$src2)>;
-def : Pat<(int_x86_mmx_psrl_d VR64:$src1, (load_mvmmx addr:$src2)),
-          (MMX_PSRLDrm VR64:$src1, addr:$src2)>;
-def : Pat<(int_x86_mmx_psrl_q VR64:$src1, (load_mvmmx addr:$src2)),
-          (MMX_PSRLQrm VR64:$src1, addr:$src2)>;
-
 defm MMX_PSLLW : MMXI_binop_rmi_int<0xF1, 0x71, MRM6r, "psllw",
                                     int_x86_mmx_psll_w, int_x86_mmx_pslli_w,
                                     MMX_SHIFT_ITINS>;
@@ -488,24 +505,12 @@ defm MMX_PSLLQ : MMXI_binop_rmi_int<0xF3, 0x73, MRM6r, "psllq",
                                     int_x86_mmx_psll_q, int_x86_mmx_pslli_q,
                                     MMX_SHIFT_ITINS>;
 
-def : Pat<(int_x86_mmx_psll_w VR64:$src1, (load_mvmmx addr:$src2)),
-          (MMX_PSLLWrm VR64:$src1, addr:$src2)>;
-def : Pat<(int_x86_mmx_psll_d VR64:$src1, (load_mvmmx addr:$src2)),
-          (MMX_PSLLDrm VR64:$src1, addr:$src2)>;
-def : Pat<(int_x86_mmx_psll_q VR64:$src1, (load_mvmmx addr:$src2)),
-          (MMX_PSLLQrm VR64:$src1, addr:$src2)>;
-
 defm MMX_PSRAW : MMXI_binop_rmi_int<0xE1, 0x71, MRM4r, "psraw",
                                     int_x86_mmx_psra_w, int_x86_mmx_psrai_w,
                                     MMX_SHIFT_ITINS>;
 defm MMX_PSRAD : MMXI_binop_rmi_int<0xE2, 0x72, MRM4r, "psrad",
                                     int_x86_mmx_psra_d, int_x86_mmx_psrai_d,
                                     MMX_SHIFT_ITINS>;
-
-def : Pat<(int_x86_mmx_psra_w VR64:$src1, (load_mvmmx addr:$src2)),
-          (MMX_PSRAWrm VR64:$src1, addr:$src2)>;
-def : Pat<(int_x86_mmx_psra_d VR64:$src1, (load_mvmmx addr:$src2)),
-          (MMX_PSRADrm VR64:$src1, addr:$src2)>;
 
 // Comparison Instructions
 defm MMX_PCMPEQB : MMXI_binop_rm_int<0x74, "pcmpeqb", int_x86_mmx_pcmpeq_b,
@@ -534,13 +539,16 @@ defm MMX_PUNPCKHDQ : MMXI_binop_rm_int<0x6A, "punpckhdq",
                                        MMX_UNPCK_H_ITINS>;
 defm MMX_PUNPCKLBW : MMXI_binop_rm_int<0x60, "punpcklbw",
                                        int_x86_mmx_punpcklbw,
-                                       MMX_UNPCK_L_ITINS>;
+                                       MMX_UNPCK_L_ITINS,
+                                       0, i32mem>;
 defm MMX_PUNPCKLWD : MMXI_binop_rm_int<0x61, "punpcklwd",
                                        int_x86_mmx_punpcklwd,
-                                       MMX_UNPCK_L_ITINS>;
+                                       MMX_UNPCK_L_ITINS,
+                                       0, i32mem>;
 defm MMX_PUNPCKLDQ : MMXI_binop_rm_int<0x62, "punpckldq",
                                        int_x86_mmx_punpckldq,
-                                       MMX_UNPCK_L_ITINS>;
+                                       MMX_UNPCK_L_ITINS,
+                                       0, i32mem>;
 
 // -- Pack Instructions
 defm MMX_PACKSSWB : MMXI_binop_rm_int<0x63, "packsswb", int_x86_mmx_packsswb,
@@ -568,9 +576,6 @@ def MMX_PSHUFWmi : MMXIi8<0x70, MRMSrcMem,
                                                    imm:$src2))],
                           IIC_MMX_PSHUF>, Sched<[WriteShuffleLd]>;
 
-
-
-
 // -- Conversion Instructions
 defm MMX_CVTPS2PI : sse12_cvt_pint<0x2D, VR128, VR64, int_x86_sse_cvtps2pi,
                       f64mem, load, "cvtps2pi\t{$src, $dst|$dst, $src}",
@@ -595,38 +600,42 @@ let Constraints = "$src1 = $dst" in {
 }
 
 // Extract / Insert
-def MMX_PEXTRWirri: MMXIi8<0xC5, MRMSrcReg,
-                       (outs GR32orGR64:$dst), (ins VR64:$src1, i32u8imm:$src2),
-                       "pextrw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-                       [(set GR32orGR64:$dst, (int_x86_mmx_pextr_w VR64:$src1,
-                                               imm:$src2))],
-                       IIC_MMX_PEXTR>, Sched<[WriteShuffle]>;
+let Predicates = [HasSSE1] in
+def MMX_PEXTRWrr: MMXIi8<0xC5, MRMSrcReg,
+                     (outs GR32orGR64:$dst), (ins VR64:$src1, i32u8imm:$src2),
+                     "pextrw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                     [(set GR32orGR64:$dst, (int_x86_mmx_pextr_w VR64:$src1,
+                                             imm:$src2))],
+                     IIC_MMX_PEXTR>, Sched<[WriteShuffle]>;
 let Constraints = "$src1 = $dst" in {
-  def MMX_PINSRWirri : MMXIi8<0xC4, MRMSrcReg,
-                      (outs VR64:$dst),
-                      (ins VR64:$src1, GR32orGR64:$src2, i32u8imm:$src3),
-                      "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-                      [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
-                                        GR32orGR64:$src2, imm:$src3))],
-                      IIC_MMX_PINSRW>, Sched<[WriteShuffle]>;
+let Predicates = [HasSSE1] in {
+  def MMX_PINSRWrr : MMXIi8<0xC4, MRMSrcReg,
+                    (outs VR64:$dst),
+                    (ins VR64:$src1, GR32orGR64:$src2, i32u8imm:$src3),
+                    "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                    [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
+                                      GR32orGR64:$src2, imm:$src3))],
+                    IIC_MMX_PINSRW>, Sched<[WriteShuffle]>;
 
-  def MMX_PINSRWirmi : MMXIi8<0xC4, MRMSrcMem,
-                     (outs VR64:$dst),
-                     (ins VR64:$src1, i16mem:$src2, i32u8imm:$src3),
-                     "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-                     [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
-                                         (i32 (anyext (loadi16 addr:$src2))),
-                                       imm:$src3))],
-                     IIC_MMX_PINSRW>, Sched<[WriteShuffleLd, ReadAfterLd]>;
+  def MMX_PINSRWrm : MMXIi8<0xC4, MRMSrcMem,
+                   (outs VR64:$dst),
+                   (ins VR64:$src1, i16mem:$src2, i32u8imm:$src3),
+                   "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+                   [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
+                                       (i32 (anyext (loadi16 addr:$src2))),
+                                     imm:$src3))],
+                   IIC_MMX_PINSRW>, Sched<[WriteShuffleLd, ReadAfterLd]>;
+}
 }
 
 // Mask creation
+let Predicates = [HasSSE1] in
 def MMX_PMOVMSKBrr : MMXI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
                           (ins VR64:$src),
                           "pmovmskb\t{$src, $dst|$dst, $src}",
                           [(set GR32orGR64:$dst,
-                                (int_x86_mmx_pmovmskb VR64:$src))]>;
-
+                                (int_x86_mmx_pmovmskb VR64:$src))],
+                          IIC_MMX_MOVMSK>, Sched<[WriteVecLogic]>;
 
 // Low word of XMM to MMX.
 def MMX_X86movdq2q : SDNode<"X86ISD::MOVDQ2Q", SDTypeProfile<1, 1,
@@ -640,12 +649,12 @@ def : Pat<(x86mmx (MMX_X86movdq2q (loadv2i64 addr:$src))),
 
 // Misc.
 let SchedRW = [WriteShuffle] in {
-let Uses = [EDI] in
+let Uses = [EDI], Predicates = [HasSSE1,Not64BitMode] in
 def MMX_MASKMOVQ : MMXI32<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
                           "maskmovq\t{$mask, $src|$src, $mask}",
                           [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, EDI)],
                           IIC_MMX_MASKMOV>;
-let Uses = [RDI] in
+let Uses = [RDI], Predicates = [HasSSE1,In64BitMode] in
 def MMX_MASKMOVQ64: MMXI64<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
                            "maskmovq\t{$mask, $src|$src, $mask}",
                            [(int_x86_mmx_maskmovq VR64:$src, VR64:$mask, RDI)],
@@ -654,14 +663,20 @@ def MMX_MASKMOVQ64: MMXI64<0xF7, MRMSrcReg, (outs), (ins VR64:$src, VR64:$mask),
 
 // 64-bit bit convert.
 let Predicates = [HasSSE2] in {
-def : Pat<(x86mmx (bitconvert (i64 GR64:$src))),
-          (MMX_MOVD64to64rr GR64:$src)>;
-def : Pat<(i64 (bitconvert (x86mmx VR64:$src))),
-          (MMX_MOVD64from64rr VR64:$src)>;
 def : Pat<(f64 (bitconvert (x86mmx VR64:$src))),
           (MMX_MOVQ2FR64rr VR64:$src)>;
 def : Pat<(x86mmx (bitconvert (f64 FR64:$src))),
           (MMX_MOVFR642Qrr FR64:$src)>;
+def : Pat<(x86mmx (MMX_X86movdq2q
+                   (bc_v2i64 (v4i32 (int_x86_sse2_cvtps2dq VR128:$src))))),
+          (MMX_CVTPS2PIirr VR128:$src)>;
+def : Pat<(x86mmx (MMX_X86movdq2q
+                   (bc_v2i64 (v4i32 (fp_to_sint (v4f32 VR128:$src)))))),
+          (MMX_CVTTPS2PIirr VR128:$src)>;
+def : Pat<(x86mmx (MMX_X86movdq2q
+                   (bc_v2i64 (v4i32 (X86cvtp2Int (v2f64 VR128:$src)))))),
+          (MMX_CVTPD2PIirr VR128:$src)>;
+def : Pat<(x86mmx (MMX_X86movdq2q
+                   (bc_v2i64 (v4i32 (X86cvttp2si (v2f64 VR128:$src)))))),
+          (MMX_CVTTPD2PIirr VR128:$src)>;
 }
-
-

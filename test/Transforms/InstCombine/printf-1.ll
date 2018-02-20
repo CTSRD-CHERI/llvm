@@ -7,13 +7,14 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 @hello_world = constant [13 x i8] c"hello world\0A\00"
 @h = constant [2 x i8] c"h\00"
+@h2 = constant [3 x i8] c"%%\00"
 @percent = constant [2 x i8] c"%\00"
 @percent_c = constant [3 x i8] c"%c\00"
 @percent_d = constant [3 x i8] c"%d\00"
 @percent_f = constant [3 x i8] c"%f\00"
 @percent_s = constant [4 x i8] c"%s\0A\00"
 @empty = constant [1 x i8] c"\00"
-; CHECK: [[STR:@[a-z0-9]+]] = private unnamed_addr constant [12 x i8] c"hello world\00"
+; CHECK: [[$STR:@[a-z0-9]+]] = private unnamed_addr constant [12 x i8] c"hello world\00"
 
 declare i32 @printf(i8*, ...)
 
@@ -38,6 +39,17 @@ define void @test_simplify2() {
 ; CHECK-NEXT: ret void
 }
 
+; Special case: printf("%%") -> putchar('%').
+
+define void @test_simplify2b() {
+; CHECK-LABEL: @test_simplify2b(
+  %fmt = getelementptr [3 x i8], [3 x i8]* @h2, i32 0, i32 0
+  call i32 (i8*, ...) @printf(i8* %fmt)
+; CHECK-NEXT: call i32 @putchar(i32 37)
+  ret void
+; CHECK-NEXT: ret void
+}
+
 define void @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
   %fmt = getelementptr [2 x i8], [2 x i8]* @percent, i32 0, i32 0
@@ -53,7 +65,7 @@ define void @test_simplify4() {
 ; CHECK-LABEL: @test_simplify4(
   %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
   call i32 (i8*, ...) @printf(i8* %fmt)
-; CHECK-NEXT: call i32 @puts(i8* getelementptr inbounds ([12 x i8], [12 x i8]* [[STR]], i32 0, i32 0))
+; CHECK-NEXT: call i32 @puts(i8* getelementptr inbounds ([12 x i8], [12 x i8]* [[$STR]], i32 0, i32 0))
   ret void
 ; CHECK-NEXT: ret void
 }

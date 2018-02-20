@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s | FileCheck %s
 
 target triple = "i686-pc-linux-gnu"
 @str = internal constant [9 x i8] c"%f+%f*i\0A\00"              ; <[9 x i8]*> [#uses=1]
@@ -6,7 +6,14 @@ target triple = "i686-pc-linux-gnu"
 define i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK-NOT: ret
-; CHECK: subl $4, %{{.*}}
+; CHECK: subl $12, %esp
+; CHECK: pushl
+; CHECK: pushl
+; CHECK: pushl
+; CHECK: pushl
+; CHECK: pushl
+; CHECK: calll cexp
+; CHECK: addl $28, %esp
 ; CHECK: ret
 
 entry:

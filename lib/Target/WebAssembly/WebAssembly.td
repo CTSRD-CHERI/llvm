@@ -6,10 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This is a target description file for the WebAssembly architecture, which is
-// also known as "wasm".
-//
+///
+/// \file
+/// \brief This is a target description file for the WebAssembly architecture,
+/// which is also known as "wasm".
+///
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -22,8 +23,19 @@ include "llvm/Target/Target.td"
 // WebAssembly Subtarget features.
 //===----------------------------------------------------------------------===//
 
-def FeatureSIMD128 : SubtargetFeature<"simd128", "HasSIMD128", "false",
+def FeatureSIMD128 : SubtargetFeature<"simd128", "HasSIMD128", "true",
                                       "Enable 128-bit SIMD">;
+def FeatureAtomics : SubtargetFeature<"atomics", "HasAtomics", "true",
+                                      "Enable Atomics">;
+def FeatureNontrappingFPToInt :
+      SubtargetFeature<"nontrapping-fptoint",
+                       "HasNontrappingFPToInt", "true",
+                       "Enable non-trapping float-to-int conversion operators">;
+
+def FeatureSignExt :
+      SubtargetFeature<"sign-ext",
+                       "HasSignExt", "true",
+                       "Enable sign extension operators">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
@@ -54,7 +66,8 @@ def : ProcessorModel<"mvp", NoSchedModel, []>;
 def : ProcessorModel<"generic", NoSchedModel, []>;
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
-def : ProcessorModel<"bleeding-edge", NoSchedModel, [FeatureSIMD128]>;
+def : ProcessorModel<"bleeding-edge", NoSchedModel,
+                      [FeatureSIMD128, FeatureAtomics]>;
 
 //===----------------------------------------------------------------------===//
 // Target Declaration

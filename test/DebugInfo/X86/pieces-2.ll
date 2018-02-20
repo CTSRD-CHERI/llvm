@@ -1,4 +1,4 @@
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
 ;
 ;    // Compile with -O1
 ;    typedef struct {
@@ -17,10 +17,10 @@
 ;
 ;
 ; CHECK: DW_TAG_variable [4]
-;                                                  rax, piece 0x00000004
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1]{{.*}}50 93 04
+; CHECK-NEXT:   DW_AT_location [DW_FORM_data4] (
+; CHECK-NEXT:     [0x0000000000000004, 0x0000000000000005): DW_OP_reg0 RAX, DW_OP_piece 0x4)
 ; CHECK-NEXT:  DW_AT_name {{.*}}"i1"
-;
+
 ; ModuleID = '/Volumes/Data/llvm/test/DebugInfo/X86/sroasplit-1.ll'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
@@ -29,12 +29,12 @@ target triple = "x86_64-apple-macosx10.9.0"
 %struct.Inner = type { i32, i64 }
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @foo(%struct.Outer* byval align 8 %outer) #0 {
+define i32 @foo(%struct.Outer* byval align 8 %outer) #0 !dbg !4 {
 entry:
   call void @llvm.dbg.declare(metadata %struct.Outer* %outer, metadata !25, metadata !DIExpression()), !dbg !26
   %i1.sroa.0.0..sroa_idx = getelementptr inbounds %struct.Outer, %struct.Outer* %outer, i64 0, i32 0, i64 1, i32 0, !dbg !27
   %i1.sroa.0.0.copyload = load i32, i32* %i1.sroa.0.0..sroa_idx, align 8, !dbg !27
-  call void @llvm.dbg.value(metadata i32 %i1.sroa.0.0.copyload, i64 0, metadata !28, metadata !29), !dbg !27
+  call void @llvm.dbg.value(metadata i32 %i1.sroa.0.0.copyload, metadata !28, metadata !29), !dbg !27
   %i1.sroa.2.0..sroa_raw_cast = bitcast %struct.Outer* %outer to i8*, !dbg !27
   %i1.sroa.2.0..sroa_raw_idx = getelementptr inbounds i8, i8* %i1.sroa.2.0..sroa_raw_cast, i64 20, !dbg !27
   ret i32 %i1.sroa.0.0.copyload, !dbg !32
@@ -44,10 +44,10 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone }
@@ -57,11 +57,10 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!22, !23}
 !llvm.ident = !{!24}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "sroasplit-1.c", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 10, file: !1, scope: !5, type: !6, function: i32 (%struct.Outer*)* @foo, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "sroasplit-1.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !9}
@@ -86,6 +85,6 @@ attributes #2 = { nounwind }
 !26 = !DILocation(line: 10, scope: !4)
 !27 = !DILocation(line: 11, scope: !4)
 !28 = !DILocalVariable(name: "i1", line: 11, scope: !4, file: !5, type: !14)
-!29 = !DIExpression(DW_OP_bit_piece, 0, 32)
+!29 = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 !31 = !{i32 3, i32 0, i32 12}
 !32 = !DILocation(line: 12, scope: !4)

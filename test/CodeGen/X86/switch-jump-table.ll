@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-pc-gnu-linux < %s | FileCheck %s -check-prefix=CHECK
-; RUN: llc -mtriple=i686-pc-gnu-linux -print-machineinstrs=expand-isel-pseudos %s -o /dev/null 2>&1 | FileCheck %s -check-prefix=CHECK-JT-WEIGHT
+; RUN: llc -mtriple=i686-pc-gnu-linux < %s | FileCheck %s
+; RUN: llc -mtriple=i686-pc-gnu-linux -print-machineinstrs=expand-isel-pseudos %s -o /dev/null 2>&1 | FileCheck %s -check-prefix=CHECK-JT-PROB
 
 
 ; An unreachable default destination is replaced with the most popular case label.
@@ -9,7 +9,7 @@ define void @foo(i32 %x, i32* %to) {
 ; CHECK: movl 4(%esp), [[REG:%e[a-z]{2}]]
 ; CHECK: cmpl $3, [[REG]]
 ; CHECK: ja .LBB0_6
-; CHECK-NEXT: # BB#1:
+; CHECK-NEXT: # %bb.1:
 ; CHECK-NEXT: jmpl *.LJTI0_0(,[[REG]],4)
 ; CHECK: movl $4
 ; CHECK: retl
@@ -54,9 +54,9 @@ default:
 ; Check if branch probabilities are correctly assigned to the jump table.
 
 define void @bar(i32 %x, i32* %to) {
-; CHECK-JT-WEIGHT-LABEL: bar:
-; CHECK-JT-WEIGHT: Successors according to CFG: BB#6(16) BB#8(96)
-; CHECK-JT-WEIGHT: Successors according to CFG: BB#1(16) BB#2(16) BB#3(16) BB#4(16) BB#5(32)
+; CHECK-JT-PROB-LABEL: bar:
+; CHECK-JT-PROB: successors: %bb.6(0x12492492), %bb.8(0x6db6db6e)
+; CHECK-JT-PROB: successors: %bb.1(0x15555555), %bb.2(0x15555555), %bb.3(0x15555555), %bb.4(0x15555555), %bb.5(0x2aaaaaab)
 
 entry:
   switch i32 %x, label %default [

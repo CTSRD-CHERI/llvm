@@ -20,15 +20,19 @@
 [common]
 subdirectories =
  AMDGPU
+ ARC
  ARM
  AArch64
+ AVR
  BPF
- CppBackend
+ Lanai
  Hexagon
  MSP430
  NVPTX
  Mips
+ Nios2
  PowerPC
+ RISCV
  Sparc
  SystemZ
  WebAssembly

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin -mcpu=g4 -disable-ppc-ilp-pref | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=g4 -disable-ppc-ilp-pref | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin -mcpu=g4 -disable-ppc-ilp-pref | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=g4 -disable-ppc-ilp-pref | FileCheck %s
 
 ; ModuleID = 'tsc.c'
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
@@ -179,7 +179,7 @@ for.end.7:                                        ; preds = %entry, %for.end.7
   br i1 %exitcond.7, label %for.end12, label %for.end.7
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 declare i32 @puts(i8* nocapture) nounwind
 

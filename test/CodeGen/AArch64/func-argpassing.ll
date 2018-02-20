@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu | FileCheck --check-prefix=CHECK %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -disable-post-ra | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 -disable-post-ra | FileCheck --check-prefix=CHECK-NOFP %s
 
 %myStruct = type { i64 , i8, i32 }
 
@@ -164,11 +164,11 @@ define void @stacked_fpu(float %var0, double %var1, float %var2, float %var3,
 define i64 @check_i128_regalign(i32 %val0, i128 %val1, i64 %val2) {
 ; CHECK-LABEL: check_i128_regalign
     store i128 %val1, i128* @var128
-; CHECK: add x[[VAR128:[0-9]+]], {{x[0-9]+}}, :lo12:var128
+; CHECK-DAG: add x[[VAR128:[0-9]+]], {{x[0-9]+}}, :lo12:var128
 ; CHECK-DAG: stp x2, x3, [x[[VAR128]]]
 
     ret i64 %val2
-; CHECK: mov x0, x4
+; CHECK-DAG: mov x0, x4
 }
 
 define void @check_i128_stackalign(i32 %val0, i32 %val1, i32 %val2, i32 %val3,
@@ -186,11 +186,11 @@ define void @check_i128_stackalign(i32 %val0, i32 %val1, i32 %val2, i32 %val3,
     ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 
 define i32 @test_extern() {
 ; CHECK-LABEL: test_extern:
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* undef, i32 undef, i32 4, i1 0)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 undef, i8* align 4 undef, i32 undef, i1 0)
 ; CHECK: bl memcpy
   ret i32 0
 }

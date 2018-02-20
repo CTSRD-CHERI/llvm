@@ -802,6 +802,63 @@ define <2 x i64> @cmgez2xi64(<2 x i64> %A) {
 }
 
 
+define <8 x i8> @cmgez8xi8_alt(<8 x i8> %A) {
+; CHECK-LABEL: cmgez8xi8_alt:
+; CHECK: cmge {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, #{{0x0|0}}
+  %sign = ashr <8 x i8> %A, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  %not = xor <8 x i8> %sign, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  ret <8 x i8> %not
+}
+
+define <16 x i8> @cmgez16xi8_alt(<16 x i8> %A) {
+; CHECK-LABEL: cmgez16xi8_alt:
+; CHECK: cmge {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, #{{0x0|0}}
+  %sign = ashr <16 x i8> %A, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  %not = xor <16 x i8> %sign, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  ret <16 x i8> %not
+}
+
+define <4 x i16> @cmgez4xi16_alt(<4 x i16> %A) {
+; CHECK-LABEL: cmgez4xi16_alt:
+; CHECK: cmge {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, #{{0x0|0}}
+  %sign = ashr <4 x i16> %A, <i16 15, i16 15, i16 15, i16 15>
+  %not = xor <4 x i16> %sign, <i16 -1, i16 -1, i16 -1, i16 -1>
+  ret <4 x i16> %not
+}
+
+define <8 x i16> @cmgez8xi16_alt(<8 x i16> %A) {
+; CHECK-LABEL: cmgez8xi16_alt:
+; CHECK: cmge {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, #{{0x0|0}}
+  %sign = ashr <8 x i16> %A, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %not = xor <8 x i16> %sign, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  ret <8 x i16> %not
+}
+
+define <2 x i32> @cmgez2xi32_alt(<2 x i32> %A) {
+; CHECK-LABEL: cmgez2xi32_alt:
+; CHECK: cmge {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, #{{0x0|0}}
+  %sign = ashr <2 x i32> %A, <i32 31, i32 31>
+  %not = xor <2 x i32> %sign, <i32 -1, i32 -1>
+  ret <2 x i32> %not
+}
+
+define <4 x i32> @cmgez4xi32_alt(<4 x i32> %A) {
+; CHECK-LABEL: cmgez4xi32_alt:
+; CHECK: cmge {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, #{{0x0|0}}
+  %sign = ashr <4 x i32> %A, <i32 31, i32 31, i32 31, i32 31>
+  %not = xor <4 x i32> %sign, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i32> %not
+}
+
+define <2 x i64> @cmgez2xi64_alt(<2 x i64> %A) {
+; CHECK-LABEL: cmgez2xi64_alt:
+; CHECK: cmge {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, #{{0x0|0}}
+  %sign = ashr <2 x i64> %A, <i64 63, i64 63>
+  %not = xor <2 x i64> %sign, <i64 -1, i64 -1>
+  ret <2 x i64> %not
+}
+
+
 define <8 x i8> @cmgtz8xi8(<8 x i8> %A) {
 ; CHECK-LABEL: cmgtz8xi8:
 ; CHECK: cmgt {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, #{{0x0|0}}
@@ -1035,63 +1092,64 @@ define <2 x i64> @cmneqz2xi64(<2 x i64> %A) {
 
 define <8 x i8> @cmhsz8xi8(<8 x i8> %A) {
 ; CHECK-LABEL: cmhsz8xi8:
-; CHECK: movi {{v[0-9]+.8b|d[0-9]+}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.8b, #{{0x2|2}}
 ; CHECK-NEXT: cmhs {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
-	%tmp3 = icmp uge <8 x i8> %A, zeroinitializer;
+	%tmp3 = icmp uge <8 x i8> %A, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
    %tmp4 = sext <8 x i1> %tmp3 to <8 x i8>
 	ret <8 x i8> %tmp4
 }
 
 define <16 x i8> @cmhsz16xi8(<16 x i8> %A) {
 ; CHECK-LABEL: cmhsz16xi8:
-; CHECK: movi {{v[0-9]+.(16b|2d)}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.16b, #{{0x2|2}}
 ; CHECK-NEXT: cmhs {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
-	%tmp3 = icmp uge <16 x i8> %A, zeroinitializer;
+	%tmp3 = icmp uge <16 x i8> %A, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
    %tmp4 = sext <16 x i1> %tmp3 to <16 x i8>
 	ret <16 x i8> %tmp4
 }
 
 define <4 x i16> @cmhsz4xi16(<4 x i16> %A) {
 ; CHECK-LABEL: cmhsz4xi16:
-; CHECK: movi {{v[0-9]+.8b|d[0-9]+}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.4h, #{{0x2|2}}
 ; CHECK-NEXT: cmhs {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
-	%tmp3 = icmp uge <4 x i16> %A, zeroinitializer;
+	%tmp3 = icmp uge <4 x i16> %A, <i16 2, i16 2, i16 2, i16 2>
    %tmp4 = sext <4 x i1> %tmp3 to <4 x i16>
 	ret <4 x i16> %tmp4
 }
 
 define <8 x i16> @cmhsz8xi16(<8 x i16> %A) {
 ; CHECK-LABEL: cmhsz8xi16:
-; CHECK: movi {{v[0-9]+.(16b|2d)}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.8h, #{{0x2|2}}
 ; CHECK-NEXT: cmhs {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
-	%tmp3 = icmp uge <8 x i16> %A, zeroinitializer;
+	%tmp3 = icmp uge <8 x i16> %A, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
    %tmp4 = sext <8 x i1> %tmp3 to <8 x i16>
 	ret <8 x i16> %tmp4
 }
 
 define <2 x i32> @cmhsz2xi32(<2 x i32> %A) {
 ; CHECK-LABEL: cmhsz2xi32:
-; CHECK: movi {{v[0-9]+.8b|d[0-9]+}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.2s, #{{0x2|2}}
 ; CHECK-NEXT: cmhs {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
-	%tmp3 = icmp uge <2 x i32> %A, zeroinitializer;
+	%tmp3 = icmp uge <2 x i32> %A, <i32 2, i32 2>
    %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
 	ret <2 x i32> %tmp4
 }
 
 define <4 x i32> @cmhsz4xi32(<4 x i32> %A) {
 ; CHECK-LABEL: cmhsz4xi32:
-; CHECK: movi {{v[0-9]+.(16b|2d)}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.4s, #{{0x2|2}}
 ; CHECK-NEXT: cmhs {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
-	%tmp3 = icmp uge <4 x i32> %A, zeroinitializer;
+	%tmp3 = icmp uge <4 x i32> %A, <i32 2, i32 2, i32 2, i32 2>
    %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
 	ret <4 x i32> %tmp4
 }
 
 define <2 x i64> @cmhsz2xi64(<2 x i64> %A) {
 ; CHECK-LABEL: cmhsz2xi64:
-; CHECK: movi {{v[0-9]+.(16b|2d)}}, #{{0x0|0}}
+; CHECK: orr w[[TWO:[0-9]+]], wzr, #0x2
+; CHECK-NEXT: {{v[0-9]+}}.2d, x[[TWO]]
 ; CHECK-NEXT: cmhs {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
-	%tmp3 = icmp uge <2 x i64> %A, zeroinitializer;
+	%tmp3 = icmp uge <2 x i64> %A, <i64 2, i64 2>
    %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
 	ret <2 x i64> %tmp4
 }
@@ -1099,63 +1157,64 @@ define <2 x i64> @cmhsz2xi64(<2 x i64> %A) {
 
 define <8 x i8> @cmhiz8xi8(<8 x i8> %A) {
 ; CHECK-LABEL: cmhiz8xi8:
-; CHECK: movi {{v[0-9]+.8b|d[0-9]+}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.8b, #{{0x1|1}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
-	%tmp3 = icmp ugt <8 x i8> %A, zeroinitializer;
+	%tmp3 = icmp ugt <8 x i8> %A, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
    %tmp4 = sext <8 x i1> %tmp3 to <8 x i8>
 	ret <8 x i8> %tmp4
 }
 
 define <16 x i8> @cmhiz16xi8(<16 x i8> %A) {
 ; CHECK-LABEL: cmhiz16xi8:
-; CHECK: movi {{v[0-9]+.(16b|2d)}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.16b, #{{0x1|1}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
-	%tmp3 = icmp ugt <16 x i8> %A, zeroinitializer;
+	%tmp3 = icmp ugt <16 x i8> %A, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
    %tmp4 = sext <16 x i1> %tmp3 to <16 x i8>
 	ret <16 x i8> %tmp4
 }
 
 define <4 x i16> @cmhiz4xi16(<4 x i16> %A) {
 ; CHECK-LABEL: cmhiz4xi16:
-; CHECK: movi {{v[0-9]+.8b|d[0-9]+}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.4h, #{{0x1|1}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
-	%tmp3 = icmp ugt <4 x i16> %A, zeroinitializer;
+	%tmp3 = icmp ugt <4 x i16> %A, <i16 1, i16 1, i16 1, i16 1>
    %tmp4 = sext <4 x i1> %tmp3 to <4 x i16>
 	ret <4 x i16> %tmp4
 }
 
 define <8 x i16> @cmhiz8xi16(<8 x i16> %A) {
 ; CHECK-LABEL: cmhiz8xi16:
-; CHECK: movi {{v[0-9]+.(16b|2d)}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.8h, #{{0x1|1}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
-	%tmp3 = icmp ugt <8 x i16> %A, zeroinitializer;
+	%tmp3 = icmp ugt <8 x i16> %A, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
    %tmp4 = sext <8 x i1> %tmp3 to <8 x i16>
 	ret <8 x i16> %tmp4
 }
 
 define <2 x i32> @cmhiz2xi32(<2 x i32> %A) {
 ; CHECK-LABEL: cmhiz2xi32:
-; CHECK: movi {{v[0-9]+.8b|d[0-9]+}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.2s, #{{0x1|1}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
-	%tmp3 = icmp ugt <2 x i32> %A, zeroinitializer;
+	%tmp3 = icmp ugt <2 x i32> %A, <i32 1, i32 1>
    %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
 	ret <2 x i32> %tmp4
 }
 
 define <4 x i32> @cmhiz4xi32(<4 x i32> %A) {
 ; CHECK-LABEL: cmhiz4xi32:
-; CHECK: movi {{v[0-9]+.(16b|2d)}}, #{{0x0|0}}
+; CHECK: movi {{v[0-9]+}}.4s, #{{0x1|1}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
-	%tmp3 = icmp ugt <4 x i32> %A, zeroinitializer;
+	%tmp3 = icmp ugt <4 x i32> %A, <i32 1, i32 1, i32 1, i32 1>
    %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
 	ret <4 x i32> %tmp4
 }
 
 define <2 x i64> @cmhiz2xi64(<2 x i64> %A) {
 ; CHECK-LABEL: cmhiz2xi64:
-; CHECK: movi {{v[0-9]+.(16b|2d)}}, #{{0x0|0}}
+; CHECK: orr w[[ONE:[0-9]+]], wzr, #{{0x1|1}}
+; CHECK-NEXT: dup {{v[0-9]+}}.2d, x[[ONE]]
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
-	%tmp3 = icmp ugt <2 x i64> %A, zeroinitializer;
+	%tmp3 = icmp ugt <2 x i64> %A, <i64 1, i64 1>
    %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
 	ret <2 x i64> %tmp4
 }
@@ -1241,9 +1300,9 @@ define <8 x i8> @cmloz8xi8(<8 x i8> %A) {
 ; CHECK-LABEL: cmloz8xi8:
 ; Using registers other than v0, v1 are possible, but would be odd.
 ; LO implemented as HI, so check reversed operands.
-; CHECK: movi {{v1.8b|d1}}, #{{0x0|0}}
+; CHECK: movi v1.8b, #{{0x2|2}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.8b, v1.8b, {{v[0-9]+}}.8b
-	%tmp3 = icmp ult <8 x i8> %A, zeroinitializer;
+	%tmp3 = icmp ult <8 x i8> %A, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
    %tmp4 = sext <8 x i1> %tmp3 to <8 x i8>
 	ret <8 x i8> %tmp4
 }
@@ -1252,9 +1311,9 @@ define <16 x i8> @cmloz16xi8(<16 x i8> %A) {
 ; CHECK-LABEL: cmloz16xi8:
 ; Using registers other than v0, v1 are possible, but would be odd.
 ; LO implemented as HI, so check reversed operands.
-; CHECK: movi {{v1.16b|v1.2d}}, #{{0x0|0}}
+; CHECK: movi v1.16b, #{{0x2|2}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.16b, v1.16b, v0.16b
-	%tmp3 = icmp ult <16 x i8> %A, zeroinitializer;
+	%tmp3 = icmp ult <16 x i8> %A, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
    %tmp4 = sext <16 x i1> %tmp3 to <16 x i8>
 	ret <16 x i8> %tmp4
 }
@@ -1263,9 +1322,9 @@ define <4 x i16> @cmloz4xi16(<4 x i16> %A) {
 ; CHECK-LABEL: cmloz4xi16:
 ; Using registers other than v0, v1 are possible, but would be odd.
 ; LO implemented as HI, so check reversed operands.
-; CHECK: movi {{v1.8b|d1}}, #{{0x0|0}}
+; CHECK: movi v1.4h, #{{0x2|2}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.4h, v1.4h, v0.4h
-	%tmp3 = icmp ult <4 x i16> %A, zeroinitializer;
+	%tmp3 = icmp ult <4 x i16> %A, <i16 2, i16 2, i16 2, i16 2>
    %tmp4 = sext <4 x i1> %tmp3 to <4 x i16>
 	ret <4 x i16> %tmp4
 }
@@ -1274,9 +1333,9 @@ define <8 x i16> @cmloz8xi16(<8 x i16> %A) {
 ; CHECK-LABEL: cmloz8xi16:
 ; Using registers other than v0, v1 are possible, but would be odd.
 ; LO implemented as HI, so check reversed operands.
-; CHECK: movi {{v1.16b|v1.2d}}, #{{0x0|0}}
+; CHECK: movi v1.8h, #{{0x2|2}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.8h, v1.8h, v0.8h
-	%tmp3 = icmp ult <8 x i16> %A, zeroinitializer;
+	%tmp3 = icmp ult <8 x i16> %A, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
    %tmp4 = sext <8 x i1> %tmp3 to <8 x i16>
 	ret <8 x i16> %tmp4
 }
@@ -1285,9 +1344,9 @@ define <2 x i32> @cmloz2xi32(<2 x i32> %A) {
 ; CHECK-LABEL: cmloz2xi32:
 ; Using registers other than v0, v1 are possible, but would be odd.
 ; LO implemented as HI, so check reversed operands.
-; CHECK: movi {{v1.8b|d1}}, #{{0x0|0}}
+; CHECK: movi v1.2s, #{{0x2|2}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.2s, v1.2s, v0.2s
-	%tmp3 = icmp ult <2 x i32> %A, zeroinitializer;
+	%tmp3 = icmp ult <2 x i32> %A, <i32 2, i32 2>
    %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
 	ret <2 x i32> %tmp4
 }
@@ -1296,9 +1355,9 @@ define <4 x i32> @cmloz4xi32(<4 x i32> %A) {
 ; CHECK-LABEL: cmloz4xi32:
 ; Using registers other than v0, v1 are possible, but would be odd.
 ; LO implemented as HI, so check reversed operands.
-; CHECK: movi {{v1.16b|v1.2d}}, #{{0x0|0}}
+; CHECK: movi v1.4s, #{{0x2|2}}
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.4s, v1.4s, v0.4s
-	%tmp3 = icmp ult <4 x i32> %A, zeroinitializer;
+	%tmp3 = icmp ult <4 x i32> %A, <i32 2, i32 2, i32 2, i32 2>
    %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
 	ret <4 x i32> %tmp4
 }
@@ -1307,9 +1366,10 @@ define <2 x i64> @cmloz2xi64(<2 x i64> %A) {
 ; CHECK-LABEL: cmloz2xi64:
 ; Using registers other than v0, v1 are possible, but would be odd.
 ; LO implemented as HI, so check reversed operands.
-; CHECK: movi {{v1.16b|v1.2d}}, #{{0x0|0}}
+; CHECK: orr w[[TWO:[0-9]+]], wzr, #{{0x2|2}}
+; CHECK-NEXT: dup v1.2d, x[[TWO]]
 ; CHECK-NEXT: cmhi {{v[0-9]+}}.2d, v1.2d, v0.2d
-	%tmp3 = icmp ult <2 x i64> %A, zeroinitializer;
+	%tmp3 = icmp ult <2 x i64> %A, <i64 2, i64 2>
    %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
 	ret <2 x i64> %tmp4
 }

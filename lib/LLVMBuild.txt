@@ -22,8 +22,9 @@ subdirectories =
  Bitcode
  CodeGen
  DebugInfo
+ Demangle
  ExecutionEngine
- LibDriver
+ FuzzMutate
  LineEditor
  Linker
  IR
@@ -31,13 +32,18 @@ subdirectories =
  LTO
  MC
  Object
+ BinaryFormat
+ ObjectYAML
  Option
  Passes
  ProfileData
  Support
  TableGen
  Target
+ Testing
+ ToolDrivers
  Transforms
+ WindowsManifest
 
 [component_0]
 type = Group

@@ -1,8 +1,13 @@
 ; RUN: llc < %s -print-machineinstrs=expand-isel-pseudos -o /dev/null 2>&1 | FileCheck %s
 
-; ARM & AArch64 run an extra SimplifyCFG which disrupts this test.
-; Hexagon crashes (PR23377)
-; XFAIL: arm,aarch64,hexagon
+; Hexagon runs passes that renumber the basic blocks, causing this test
+; to fail.
+; XFAIL: hexagon
+
+; Bug: PR31899
+; XFAIL: avr
+
+declare void @foo()
 
 ; Make sure we have the correct weight attached to each successor.
 define i32 @test2(i32 %x) nounwind uwtable readnone ssp {
@@ -14,15 +19,20 @@ entry:
     i64 1, label %sw.bb
     i64 4, label %sw.bb
     i64 5, label %sw.bb1
+    i64 15, label %sw.bb
   ], !prof !0
-; CHECK: BB#0: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#2(64) BB#4(21)
-; CHECK: BB#4: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#1(10) BB#5(11)
-; CHECK: BB#5: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#1(4) BB#3(7)
+; CHECK: bb.0.entry:
+; CHECK: successors: %bb.1(0x75f8ebf2), %bb.4(0x0a07140e)
+; CHECK: bb.4.entry:
+; CHECK: successors: %bb.2(0x60606068), %bb.5(0x1f9f9f98)
+; CHECK: bb.5.entry:
+; CHECK: successors: %bb.1(0x3cf3cf4b), %bb.6(0x430c30b5)
+; CHECK: bb.6.entry:
+; CHECK: successors: %bb.1(0x2e8ba2d7), %bb.3(0x51745d29)
 
 sw.bb:
+; this call will prevent simplifyCFG from optimizing the block away in ARM/AArch64.
+  tail call void @foo()
   br label %return
 
 sw.bb1:
@@ -33,7 +43,7 @@ return:
   ret i32 %retval.0
 }
 
-!0 = !{!"branch_weights", i32 7, i32 6, i32 4, i32 4, i32 64}
+!0 = !{!"branch_weights", i32 7, i32 6, i32 4, i32 4, i32 64, i21 1000}
 
 
 declare void @g(i32)
@@ -41,11 +51,11 @@ define void @left_leaning_weight_balanced_tree(i32 %x) {
 entry:
   switch i32 %x, label %return [
     i32 0,  label %bb0
-    i32 10, label %bb1
-    i32 20, label %bb2
-    i32 30, label %bb3
-    i32 40, label %bb4
-    i32 50, label %bb5
+    i32 100, label %bb1
+    i32 200, label %bb2
+    i32 300, label %bb3
+    i32 400, label %bb4
+    i32 500, label %bb5
   ], !prof !1
 bb0: tail call void @g(i32 0) br label %return
 bb1: tail call void @g(i32 1) br label %return
@@ -60,15 +70,15 @@ return: ret void
 ; right with weight 20.
 ;
 ; CHECK-LABEL: Machine code for function left_leaning_weight_balanced_tree:
-; CHECK: BB#0: derived from LLVM BB %entry
+; CHECK: bb.0.entry:
 ; CHECK-NOT: Successors
-; CHECK: Successors according to CFG: BB#8(13) BB#9(20)
+; CHECK: successors: %bb.8(0x32d2d2d3), %bb.9(0x4d2d2d2d)
 }
 
 !1 = !{!"branch_weights",
   ; Default:
   i32 1,
-  ; Case 0, 10, 20:
+  ; Case 0, 100, 200:
   i32 10, i32 1, i32 1,
-  ; Case 30, 40, 50:
+  ; Case 300, 400, 500:
   i32 1, i32 10, i32 10}

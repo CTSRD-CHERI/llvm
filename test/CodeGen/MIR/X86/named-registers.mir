@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses X86 registers correctly.
 
 --- |
@@ -14,8 +14,8 @@
 name:            foo
 body: |
   bb.0.entry:
-    ; CHECK:      %eax = MOV32r0
-    ; CHECK-NEXT: RETQ %eax
-    %eax = MOV32r0 implicit-def %eflags
-    RETQ %eax
+    ; CHECK:      $eax = MOV32r0
+    ; CHECK-NEXT: RETQ $eax
+    $eax = MOV32r0 implicit-def $eflags
+    RETQ $eax
 ...

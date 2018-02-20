@@ -1,10 +1,10 @@
-; RUN: llc -verify-machineinstrs -mtriple=arm64-linux-gnu -pre-RA-sched=linearize -enable-misched=false < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=arm64-linux-gnu -pre-RA-sched=linearize -enable-misched=false -disable-post-ra < %s | FileCheck %s
 
 %va_list = type {i8*, i8*, i8*, i32, i32}
 
 @var = global %va_list zeroinitializer, align 8
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start.p0i8(i8*)
 
 define void @test_simple(i32 %n, ...) {
 ; CHECK-LABEL: test_simple:
@@ -32,14 +32,12 @@ define void @test_simple(i32 %n, ...) {
 ; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #128
 ; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
 
-; CHECK: movn [[GR_OFFS:w[0-9]+]], #0x37
-; CHECK: str [[GR_OFFS]], [x[[VA_LIST]], #24]
-
-; CHECK: orr [[VR_OFFS:w[0-9]+]], wzr, #0xffffff80
-; CHECK: str [[VR_OFFS]], [x[[VA_LIST]], #28]
+; CHECK: mov     [[GRVR:x[0-9]+]], #-545460846720
+; CHECK: movk    [[GRVR]], #65480
+; CHECK: str     [[GRVR]], [x[[VA_LIST]], #24]
 
   %addr = bitcast %va_list* @var to i8*
-  call void @llvm.va_start(i8* %addr)
+  call void @llvm.va_start.p0i8(i8* %addr)
 
   ret void
 }
@@ -70,14 +68,12 @@ define void @test_fewargs(i32 %n, i32 %n1, i32 %n2, float %m, ...) {
 ; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #112
 ; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
 
-; CHECK: movn [[GR_OFFS:w[0-9]+]], #0x27
-; CHECK: str [[GR_OFFS]], [x[[VA_LIST]], #24]
-
-; CHECK: movn [[VR_OFFS:w[0-9]+]], #0x6f
-; CHECK: str [[VR_OFFS]], [x[[VA_LIST]], #28]
+; CHECK: mov  [[GRVR_OFFS:x[0-9]+]], #-40
+; CHECK: movk [[GRVR_OFFS]], #65424, lsl #32
+; CHECK: str  [[GRVR_OFFS]], [x[[VA_LIST]], #24]
 
   %addr = bitcast %va_list* @var to i8*
-  call void @llvm.va_start(i8* %addr)
+  call void @llvm.va_start.p0i8(i8* %addr)
 
   ret void
 }
@@ -86,7 +82,7 @@ define void @test_nospare([8 x i64], [8 x float], ...) {
 ; CHECK-LABEL: test_nospare:
 
   %addr = bitcast %va_list* @var to i8*
-  call void @llvm.va_start(i8* %addr)
+  call void @llvm.va_start.p0i8(i8* %addr)
 ; CHECK-NOT: sub sp, sp
 ; CHECK: mov [[STACK:x[0-9]+]], sp
 ; CHECK: add x[[VAR:[0-9]+]], {{x[0-9]+}}, :lo12:var
@@ -99,30 +95,30 @@ define void @test_nospare([8 x i64], [8 x float], ...) {
 ; __stack field should point just past them.
 define void @test_offsetstack([8 x i64], [2 x i64], [3 x float], ...) {
 ; CHECK-LABEL: test_offsetstack:
-; CHECK: sub sp, sp, #80
+; CHECK: stp {{q[0-9]+}}, {{q[0-9]+}}, [sp, #-80]!
 ; CHECK: add [[STACK_TOP:x[0-9]+]], sp, #96
 ; CHECK: add x[[VAR:[0-9]+]], {{x[0-9]+}}, :lo12:var
 ; CHECK: str [[STACK_TOP]], [x[[VAR]]]
 
   %addr = bitcast %va_list* @var to i8*
-  call void @llvm.va_start(i8* %addr)
+  call void @llvm.va_start.p0i8(i8* %addr)
   ret void
 }
 
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_end.p0i8(i8*)
 
 define void @test_va_end() nounwind {
 ; CHECK-LABEL: test_va_end:
-; CHECK-NEXT: BB#0
+; CHECK-NEXT: %bb.0
 
   %addr = bitcast %va_list* @var to i8*
-  call void @llvm.va_end(i8* %addr)
+  call void @llvm.va_end.p0i8(i8* %addr)
 
   ret void
 ; CHECK-NEXT: ret
 }
 
-declare void @llvm.va_copy(i8* %dest, i8* %src)
+declare void @llvm.va_copy.p0i8.p0i8(i8* %dest, i8* %src)
 
 @second_list = global %va_list zeroinitializer
 
@@ -130,7 +126,7 @@ define void @test_va_copy() {
 ; CHECK-LABEL: test_va_copy:
   %srcaddr = bitcast %va_list* @var to i8*
   %dstaddr = bitcast %va_list* @second_list to i8*
-  call void @llvm.va_copy(i8* %dstaddr, i8* %srcaddr)
+  call void @llvm.va_copy.p0i8.p0i8(i8* %dstaddr, i8* %srcaddr)
 
 ; CHECK: add x[[SRC:[0-9]+]], {{x[0-9]+}}, :lo12:var
 

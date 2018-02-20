@@ -52,7 +52,7 @@ function(llvm_process_sources OUT_VAR)
   cmake_parse_arguments(ARG "" "" "ADDITIONAL_HEADERS;ADDITIONAL_HEADER_DIRS" ${ARGN})
   set(sources ${ARG_UNPARSED_ARGUMENTS})
   llvm_check_source_file_list( ${sources} )
-  if( MSVC_IDE OR XCODE )
+  if( LLVM_ENABLE_IDE )
     # This adds .td and .h files to the Visual Studio solution:
     add_td_sources(sources)
     find_all_header_files(hdrs "${ARG_ADDITIONAL_HEADER_DIRS}")
@@ -68,17 +68,29 @@ endfunction(llvm_process_sources)
 
 
 function(llvm_check_source_file_list)
-  set(listed ${ARGN})
-  file(GLOB globbed *.c *.cpp)
+  cmake_parse_arguments(ARG "" "SOURCE_DIR" "" ${ARGN})
+  set(listed ${ARG_UNPARSED_ARGUMENTS})
+  if(ARG_SOURCE_DIR)
+    file(GLOB globbed
+         RELATIVE "${CMAKE_CURRENT_LIST_DIR}"
+         "${ARG_SOURCE_DIR}/*.c" "${ARG_SOURCE_DIR}/*.cpp")
+  else()
+    file(GLOB globbed *.c *.cpp)
+  endif()
   foreach(g ${globbed})
     get_filename_component(fn ${g} NAME)
+    if(ARG_SOURCE_DIR)
+      set(entry "${g}")
+    else()
+      set(entry "${fn}")
+    endif()
 
     # Don't reject hidden files. Some editors create backups in the
     # same directory as the file.
     if (NOT "${fn}" MATCHES "^\\.")
-      list(FIND LLVM_OPTIONAL_SOURCES ${fn} idx)
+      list(FIND LLVM_OPTIONAL_SOURCES ${entry} idx)
       if( idx LESS 0 )
-        list(FIND listed ${fn} idx)
+        list(FIND listed ${entry} idx)
         if( idx LESS 0 )
           message(SEND_ERROR "Found unknown source file ${g}
 Please update ${CMAKE_CURRENT_LIST_FILE}\n")

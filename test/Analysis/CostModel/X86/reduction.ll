@@ -11,8 +11,8 @@ define fastcc float @reduction_cost_float(<4 x float> %rdx) {
 
 ; Check that we recognize the tree starting at the extractelement as a
 ; reduction.
-; CHECK-LABEL: reduction_cost
-; CHECK:  cost of 9 {{.*}} extractelement
+; CHECK-LABEL: reduction_cost_float
+; CHECK:  cost of 7 {{.*}} extractelement
 
   %r = extractelement <4 x float> %bin.rdx8, i32 0
   ret float %r
@@ -33,7 +33,9 @@ define fastcc i32 @reduction_cost_int(<8 x i32> %rdx) {
   %bin.rdx.3 = add <8 x i32> %bin.rdx.2, %rdx.shuf.3
 
 ; CHECK-LABEL: reduction_cost_int
-; CHECK:  cost of 23 {{.*}} extractelement
+; CHECK:  cost of 11 {{.*}} extractelement
+; AVX-LABEL: reduction_cost_int
+; AVX:  cost of 5 {{.*}} extractelement
 
   %r = extractelement <8 x i32> %bin.rdx.3, i32 0
   ret i32 %r
@@ -52,7 +54,7 @@ define fastcc float @pairwise_hadd(<4 x float> %rdx, float %f1) {
   %bin.rdx.1 = fadd <4 x float> %rdx.shuf.1.0, %rdx.shuf.1.1
 
 ; CHECK-LABEL: pairwise_hadd
-; CHECK: cost of 11 {{.*}} extractelement
+; CHECK: cost of 9 {{.*}} extractelement
 
   %r = extractelement <4 x float> %bin.rdx.1, i32 0
   %r2 = fadd float %r, %f1
@@ -72,7 +74,7 @@ define fastcc float @pairwise_hadd_assoc(<4 x float> %rdx, float %f1) {
   %bin.rdx.1 = fadd <4 x float> %rdx.shuf.1.0, %rdx.shuf.1.1
 
 ; CHECK-LABEL: pairwise_hadd_assoc
-; CHECK: cost of 11 {{.*}} extractelement
+; CHECK: cost of 9 {{.*}} extractelement
 
   %r = extractelement <4 x float> %bin.rdx.1, i32 0
   %r2 = fadd float %r, %f1

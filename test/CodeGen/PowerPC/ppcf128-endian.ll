@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -mattr=+altivec -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec -mattr=-vsx < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
@@ -104,9 +104,10 @@ entry:
   %0 = bitcast i128 %x to ppc_fp128
   ret ppc_fp128 %0
 }
-; CHECK: @convert_to
+; CHECK: convert_to:
 ; CHECK: std 3, [[OFF1:.*]](1)
 ; CHECK: std 4, [[OFF2:.*]](1)
+; CHECK: ori 2, 2, 0
 ; CHECK: lfd 1, [[OFF1]](1)
 ; CHECK: lfd 2, [[OFF2]](1)
 ; CHECK: blr
@@ -118,9 +119,10 @@ entry:
   ret ppc_fp128 %0
 }
 
-; CHECK: @convert_to
+; CHECK: convert_to2:
 ; CHECK: std 3, [[OFF1:.*]](1)
-; CHECK: std 4, [[OFF2:.*]](1)
+; CHECK: std 5, [[OFF2:.*]](1)
+; CHECK: ori 2, 2, 0
 ; CHECK: lfd 1, [[OFF1]](1)
 ; CHECK: lfd 2, [[OFF2]](1)
 ; CHECK: blr
@@ -137,13 +139,13 @@ entry:
 ; CHECK: lfd 1, [[OFF]](1)
 ; CHECK: blr
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start.p0i8(i8*)
 
 define double @vararg(i32 %a, ...) {
 entry:
   %va = alloca i8*, align 8
   %va1 = bitcast i8** %va to i8*
-  call void @llvm.va_start(i8* %va1)
+  call void @llvm.va_start.p0i8(i8* %va1)
   %arg = va_arg i8** %va, ppc_fp128
   %conv = fptrunc ppc_fp128 %arg to double
   ret double %conv

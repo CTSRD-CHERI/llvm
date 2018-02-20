@@ -18,12 +18,15 @@ namespace object {
 class COFFImportFile;
 class ObjectFile;
 }
+namespace codeview {
+class MergingTypeTableBuilder;
+}
 
-class StreamWriter;
+class ScopedPrinter;
 
 class ObjDumper {
 public:
-  ObjDumper(StreamWriter& Writer);
+  ObjDumper(ScopedPrinter &Writer);
   virtual ~ObjDumper();
 
   virtual void printFileHeaders() = 0;
@@ -42,6 +45,10 @@ public:
   virtual void printGnuHashTable() { }
   virtual void printLoadName() {}
   virtual void printVersionInfo() {}
+  virtual void printGroupSections() {}
+  virtual void printHashHistogram() {}
+  virtual void printNotes() {}
+  virtual void printELFLinkerOptions() {}
 
   // Only implemented for ARM ELF at this time.
   virtual void printAttributes() { }
@@ -50,12 +57,20 @@ public:
   virtual void printMipsPLTGOT() { }
   virtual void printMipsABIFlags() { }
   virtual void printMipsReginfo() { }
+  virtual void printMipsOptions() { }
 
   // Only implemented for PE/COFF.
   virtual void printCOFFImports() { }
   virtual void printCOFFExports() { }
   virtual void printCOFFDirectives() { }
   virtual void printCOFFBaseReloc() { }
+  virtual void printCOFFDebugDirectory() { }
+  virtual void printCOFFResources() {}
+  virtual void printCOFFLoadConfig() { }
+  virtual void printCodeViewDebugInfo() { }
+  virtual void
+  mergeCodeViewTypes(llvm::codeview::MergingTypeTableBuilder &CVIDs,
+                     llvm::codeview::MergingTypeTableBuilder &CVTypes) {}
 
   // Only implemented for MachO.
   virtual void printMachODataInCode() { }
@@ -68,22 +83,31 @@ public:
   virtual void printStackMap() const = 0;
 
 protected:
-  StreamWriter& W;
+  ScopedPrinter &W;
 };
 
 std::error_code createCOFFDumper(const object::ObjectFile *Obj,
-                                 StreamWriter &Writer,
+                                 ScopedPrinter &Writer,
                                  std::unique_ptr<ObjDumper> &Result);
 
 std::error_code createELFDumper(const object::ObjectFile *Obj,
-                                StreamWriter &Writer,
+                                ScopedPrinter &Writer,
                                 std::unique_ptr<ObjDumper> &Result);
 
 std::error_code createMachODumper(const object::ObjectFile *Obj,
-                                  StreamWriter &Writer,
+                                  ScopedPrinter &Writer,
                                   std::unique_ptr<ObjDumper> &Result);
 
-void dumpCOFFImportFile(const object::COFFImportFile *File);
+std::error_code createWasmDumper(const object::ObjectFile *Obj,
+                                 ScopedPrinter &Writer,
+                                 std::unique_ptr<ObjDumper> &Result);
+
+void dumpCOFFImportFile(const object::COFFImportFile *File,
+                        ScopedPrinter &Writer);
+
+void dumpCodeViewMergedTypes(
+    ScopedPrinter &Writer, llvm::codeview::MergingTypeTableBuilder &IDTable,
+    llvm::codeview::MergingTypeTableBuilder &TypeTable);
 
 } // namespace llvm
 

@@ -25,8 +25,8 @@ class ARMInstrInfo : public ARMBaseInstrInfo {
 public:
   explicit ARMInstrInfo(const ARMSubtarget &STI);
 
-  /// getNoopForMachoTarget - Return the noop instruction to use for a noop.
-  void getNoopForMachoTarget(MCInst &NopInst) const override;
+  /// Return the noop instruction to use for a noop.
+  void getNoop(MCInst &NopInst) const override;
 
   // Return the non-pre/post incrementing version of 'Opc'. Return 0
   // if there is not such an opcode.
@@ -38,9 +38,15 @@ public:
   ///
   const ARMRegisterInfo &getRegisterInfo() const override { return RI; }
 
+  std::pair<unsigned, unsigned>
+  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableDirectMachineOperandTargetFlags() const override;
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableBitmaskMachineOperandTargetFlags() const override;
+
 private:
-  void expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                            Reloc::Model RM) const override;
+  void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };
 
 }

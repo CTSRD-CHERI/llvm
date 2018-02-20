@@ -27,11 +27,11 @@ class CodeGenTarget;
 class CodeGenSchedModels;
 class CodeGenInstruction;
 
-typedef std::vector<Record*> RecVec;
-typedef std::vector<Record*>::const_iterator RecIter;
+using RecVec = std::vector<Record*>;
+using RecIter = std::vector<Record*>::const_iterator;
 
-typedef std::vector<unsigned> IdxVec;
-typedef std::vector<unsigned>::const_iterator IdxIter;
+using IdxVec = std::vector<unsigned>;
+using IdxIter = std::vector<unsigned>::const_iterator;
 
 void splitSchedReadWrites(const RecVec &RWDefs,
                           RecVec &WriteDefs, RecVec &ReadDefs);
@@ -189,13 +189,16 @@ struct CodeGenProcModel {
   // This list is empty if no ItinRW refers to this Processor.
   RecVec ItinRWDefs;
 
+  // List of unsupported feature.
+  // This list is empty if the Processor has no UnsupportedFeatures.
+  RecVec UnsupportedFeaturesDefs;
+
   // All read/write resources associated with this processor.
   RecVec WriteResDefs;
   RecVec ReadAdvanceDefs;
 
   // Per-operand machine model resources associated with this processor.
   RecVec ProcResourceDefs;
-  RecVec ProcResGroupDefs;
 
   CodeGenProcModel(unsigned Idx, const std::string &Name, Record *MDef,
                    Record *IDef) :
@@ -210,6 +213,8 @@ struct CodeGenProcModel {
   }
 
   unsigned getProcResourceIdx(Record *PRDef) const;
+
+  bool isUnsupported(const CodeGenInstruction &Inst) const;
 
 #ifndef NDEBUG
   void dump() const;
@@ -228,7 +233,7 @@ class CodeGenSchedModels {
   std::vector<CodeGenProcModel> ProcModels;
 
   // Map Processor's MachineModel or ProcItin to a CodeGenProcModel index.
-  typedef DenseMap<Record*, unsigned> ProcModelMapTy;
+  using ProcModelMapTy = DenseMap<Record*, unsigned>;
   ProcModelMapTy ProcModelMap;
 
   // Per-operand SchedReadWrite types.
@@ -241,34 +246,35 @@ class CodeGenSchedModels {
   // Any inferred SchedClass has an index greater than NumInstrSchedClassses.
   unsigned NumInstrSchedClasses;
 
+  RecVec ProcResourceDefs;
+  RecVec ProcResGroups;
+
   // Map each instruction to its unique SchedClass index considering the
   // combination of it's itinerary class, SchedRW list, and InstRW records.
-  typedef DenseMap<Record*, unsigned> InstClassMapTy;
+  using InstClassMapTy = DenseMap<Record*, unsigned>;
   InstClassMapTy InstrClassMap;
 
 public:
   CodeGenSchedModels(RecordKeeper& RK, const CodeGenTarget &TGT);
 
   // iterator access to the scheduling classes.
-  typedef std::vector<CodeGenSchedClass>::iterator class_iterator;
-  typedef std::vector<CodeGenSchedClass>::const_iterator const_class_iterator;
+  using class_iterator = std::vector<CodeGenSchedClass>::iterator;
+  using const_class_iterator = std::vector<CodeGenSchedClass>::const_iterator;
   class_iterator classes_begin() { return SchedClasses.begin(); }
   const_class_iterator classes_begin() const { return SchedClasses.begin(); }
   class_iterator classes_end() { return SchedClasses.end(); }
   const_class_iterator classes_end() const { return SchedClasses.end(); }
   iterator_range<class_iterator> classes() {
-   return iterator_range<class_iterator>(classes_begin(), classes_end());
+   return make_range(classes_begin(), classes_end());
   }
   iterator_range<const_class_iterator> classes() const {
-   return iterator_range<const_class_iterator>(classes_begin(), classes_end());
+   return make_range(classes_begin(), classes_end());
   }
   iterator_range<class_iterator> explicit_classes() {
-    return iterator_range<class_iterator>(
-        classes_begin(), classes_begin() + NumInstrSchedClasses);
+    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
   }
   iterator_range<const_class_iterator> explicit_classes() const {
-    return iterator_range<const_class_iterator>(
-        classes_begin(), classes_begin() + NumInstrSchedClasses);
+    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
   }
 
   Record *getModelOrItinDef(Record *ProcDef) const {
@@ -299,9 +305,10 @@ public:
   }
 
   // Iterate over the unique processor models.
-  typedef std::vector<CodeGenProcModel>::const_iterator ProcIter;
+  using ProcIter = std::vector<CodeGenProcModel>::const_iterator;
   ProcIter procModelBegin() const { return ProcModels.begin(); }
   ProcIter procModelEnd() const { return ProcModels.end(); }
+  ArrayRef<CodeGenProcModel> procModels() const { return ProcModels; }
 
   // Return true if any processors have itineraries.
   bool hasItineraries() const;
@@ -352,9 +359,10 @@ public:
   // for NoItinerary.
   unsigned getSchedClassIdx(const CodeGenInstruction &Inst) const;
 
-  typedef std::vector<CodeGenSchedClass>::const_iterator SchedClassIter;
+  using SchedClassIter = std::vector<CodeGenSchedClass>::const_iterator;
   SchedClassIter schedClassBegin() const { return SchedClasses.begin(); }
   SchedClassIter schedClassEnd() const { return SchedClasses.end(); }
+  ArrayRef<CodeGenSchedClass> schedClasses() const { return SchedClasses; }
 
   unsigned numInstrSchedClasses() const { return NumInstrSchedClasses; }
 
@@ -373,8 +381,8 @@ public:
   unsigned findSchedClassIdx(Record *ItinClassDef, ArrayRef<unsigned> Writes,
                              ArrayRef<unsigned> Reads) const;
 
-  Record *findProcResUnits(Record *ProcResKind,
-                           const CodeGenProcModel &PM) const;
+  Record *findProcResUnits(Record *ProcResKind, const CodeGenProcModel &PM,
+                           ArrayRef<SMLoc> Loc) const;
 
 private:
   void collectProcModels();
@@ -399,7 +407,11 @@ private:
 
   void collectProcItinRW();
 
+  void collectProcUnsupportedFeatures();
+
   void inferSchedClasses();
+
+  void checkCompleteness();
 
   void inferFromRW(ArrayRef<unsigned> OperWrites, ArrayRef<unsigned> OperReads,
                    unsigned FromClassIdx, ArrayRef<unsigned> ProcIndices);
@@ -419,7 +431,8 @@ private:
   void collectRWResources(ArrayRef<unsigned> Writes, ArrayRef<unsigned> Reads,
                           ArrayRef<unsigned> ProcIndices);
 
-  void addProcResource(Record *ProcResourceKind, CodeGenProcModel &PM);
+  void addProcResource(Record *ProcResourceKind, CodeGenProcModel &PM,
+                       ArrayRef<SMLoc> Loc);
 
   void addWriteRes(Record *ProcWriteResDef, unsigned PIdx);
 

@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=arm64-apple-ios7.0.0 -code-model=small -relocation-model=pic -filetype=obj -o %T/foo.o %s
-# RUN: llvm-rtdyld -triple=arm64-apple-ios7.0.0 -map-section foo.o,__text=0x10bc0 -verify -check=%s %/T/foo.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=arm64-apple-ios7.0.0 -filetype=obj -o %t/foo.o %s
+# RUN: llvm-rtdyld -triple=arm64-apple-ios7.0.0 -map-section foo.o,__text=0x10bc0 -verify -check=%s %t/foo.o
 
     .section  __TEXT,__text,regular,pure_instructions
     .ios_version_min 7, 0
@@ -77,3 +78,8 @@ tgt:
     .fill 4096, 1, 0
 _ptr:
     .quad _foo
+
+# Test ARM64_RELOC_SUBTRACTOR.
+# rtdyld-check: *{8}_subtractor_result = _test_branch_reloc - _foo
+_subtractor_result:
+    .quad _test_branch_reloc - _foo

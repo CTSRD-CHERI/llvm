@@ -36,7 +36,7 @@ entry:
   store i32 0, i32* %retval
   %0 = call i8* @llvm.frameaddress(i32 0)
   store i8* %0, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8**)
-  %1 = call i8* @llvm.stacksave()
+  %1 = call i8* @llvm.stacksave.p0i8()
   store i8* %1, i8** getelementptr (i8*, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8**), i32 2)
   %2 = call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8*))
   %tobool = icmp ne i32 %2, 0
@@ -60,13 +60,13 @@ return:                                           ; preds = %if.end, %if.then
 
 ; FIXME: We should be saving VRSAVE on Darwin, but we're not!
 
-; CHECK: @main
+; CHECK-LABEL: main:
 ; CHECK: std
 ; Make sure that we're not saving VRSAVE on non-Darwin:
 ; CHECK-NOT: mfspr
 
 ; CHECK-DAG: stfd
-; CHECK-DAG: stvx
+; CHECK-DAG: stxvd2x
 
 ; CHECK-DAG: addis [[REG:[0-9]+]], 2, env_sigill@toc@ha
 ; CHECK-DAG: std 31, env_sigill@toc@l([[REG]])
@@ -74,30 +74,30 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK-DAG: std [[REGA]], [[OFF:[0-9]+]](31)                  # 8-byte Folded Spill
 ; CHECK-DAG: std 1, 16([[REGA]])
 ; CHECK-DAG: std 2, 24([[REGA]])
-; CHECK: bcl 20, 31, .LBB1_1
+; CHECK: bcl 20, 31, .LBB1_3
 ; CHECK: li 3, 1
-; CHECK: #EH_SjLj_Setup	.LBB1_1
-; CHECK: b .LBB1_2
+; CHECK: #EH_SjLj_Setup	.LBB1_3
+; CHECK: # %bb.1:
 
-; CHECK: .LBB1_1:
+; CHECK: .LBB1_3:
 ; CHECK: mflr [[REGL:[0-9]+]]
 ; CHECK: ld [[REG2:[0-9]+]], [[OFF]](31)                   # 8-byte Folded Reload
 ; CHECK: std [[REGL]], 8([[REG2]])
 ; CHECK: li 3, 0
 
-; CHECK: .LBB1_2:
+; CHECK: .LBB1_5:
 
-; CHECK: lfd
-; CHECK: lvx
+; CHECK-DAG: lfd
+; CHECK-DAG: lxvd2x
 ; CHECK: ld
 ; CHECK: blr
 
-; CHECK-NOAV: @main
-; CHECK-NOAV-NOT: stvx
+; CHECK-NOAV-LABEL: main:
+; CHECK-NOAV-NOT: stxvd2x
 ; CHECK-NOAV: bcl
 ; CHECK-NOAV: mflr
 ; CHECK-NOAV: bl foo
-; CHECK-NOAV-NOT: lvx
+; CHECK-NOAV-NOT: lxvd2x
 ; CHECK-NOAV: blr
 }
 
@@ -109,7 +109,7 @@ entry:
   store i32 0, i32* %retval
   %0 = call i8* @llvm.frameaddress(i32 0)
   store i8* %0, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8**)
-  %1 = call i8* @llvm.stacksave()
+  %1 = call i8* @llvm.stacksave.p0i8()
   store i8* %1, i8** getelementptr (i8*, i8** bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8**), i32 2)
   %2 = call i32 @llvm.eh.sjlj.setjmp(i8* bitcast ([1 x %struct.__jmp_buf_tag]* @env_sigill to i8*))
   %tobool = icmp ne i32 %2, 0
@@ -131,7 +131,7 @@ return:                                           ; preds = %if.end, %if.then
   %3 = load i32, i32* %retval
   ret i32 %3
 
-; CHECK: @main2
+; CHECK-LABEL: main2:
 
 ; CHECK: addis [[REG:[0-9]+]], 2, env_sigill@toc@ha
 ; CHECK-DAG: std 31, env_sigill@toc@l([[REG]])
@@ -149,7 +149,7 @@ declare void @bar(i8*) #3
 
 declare i8* @llvm.frameaddress(i32) #2
 
-declare i8* @llvm.stacksave() #3
+declare i8* @llvm.stacksave.p0i8() #3
 
 declare i32 @llvm.eh.sjlj.setjmp(i8*) #3
 

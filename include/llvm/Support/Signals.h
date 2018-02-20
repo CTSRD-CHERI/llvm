@@ -36,10 +36,16 @@ namespace sys {
   /// signal delivery.
   void DontRemoveFileOnSignal(StringRef Filename);
 
-  /// When an error signal (such as SIBABRT or SIGSEGV) is delivered to the
+  /// When an error signal (such as SIGABRT or SIGSEGV) is delivered to the
   /// process, print a stack trace and then exit.
-  /// @brief Print a stack trace if a fatal signal occurs.
-  void PrintStackTraceOnErrorSignal(bool DisableCrashReporting = false);
+  /// \brief Print a stack trace if a fatal signal occurs.
+  /// \param Argv0 the current binary name, used to find the symbolizer
+  ///        relative to the current binary before searching $PATH; can be
+  ///        StringRef(), in which case we will only search $PATH.
+  /// \param DisableCrashReporting if \c true, disable the normal crash
+  ///        reporting mechanisms on the underlying operating system.
+  void PrintStackTraceOnErrorSignal(StringRef Argv0,
+                                    bool DisableCrashReporting = false);
 
   /// Disable all system dialog boxes that appear when the process crashes.
   void DisableSystemDialogsOnCrash();

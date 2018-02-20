@@ -1,21 +1,28 @@
 add_llvm_library(LLVMipo
+  AlwaysInliner.cpp
   ArgumentPromotion.cpp
   BarrierNoopPass.cpp
+  BlockExtractor.cpp
+  CalledValuePropagation.cpp
   ConstantMerge.cpp
+  CrossDSOCFI.cpp
   DeadArgumentElimination.cpp
   ElimAvailExtern.cpp
   ExtractGV.cpp
+  ForceFunctionAttrs.cpp
   FunctionAttrs.cpp
+  FunctionImport.cpp
   GlobalDCE.cpp
   GlobalOpt.cpp
+  GlobalSplit.cpp
   IPConstantPropagation.cpp
   IPO.cpp
-  InlineAlways.cpp
+  InferFunctionAttrs.cpp
   InlineSimple.cpp
   Inliner.cpp
   Internalize.cpp
   LoopExtractor.cpp
-  LowerBitSets.cpp
+  LowerTypeTests.cpp
   MergeFunctions.cpp
   PartialInlining.cpp
   PassManagerBuilder.cpp
@@ -23,10 +30,14 @@ add_llvm_library(LLVMipo
   SampleProfile.cpp
   StripDeadPrototypes.cpp
   StripSymbols.cpp
+  SyntheticCountsPropagation.cpp
+  ThinLTOBitcodeWriter.cpp
+  WholeProgramDevirt.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/IPO
-  )
 
-add_dependencies(LLVMipo intrinsics_gen)
+  DEPENDS
+  intrinsics_gen
+  )
