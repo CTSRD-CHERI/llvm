@@ -1,4 +1,4 @@
-//===- NativeEnumSymbol.h - info about enum type ----------------*- C++ -*-===//
+//===- NativeTypeEnum.h - info about enum type ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMSYMBOL_H
-#define LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMSYMBOL_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
@@ -18,12 +18,14 @@
 namespace llvm {
 namespace pdb {
 
-class NativeEnumSymbol : public NativeRawSymbol,
-                         public codeview::TypeVisitorCallbacks {
+class NativeTypeEnum : public NativeRawSymbol,
+                       public codeview::TypeVisitorCallbacks {
 public:
-  NativeEnumSymbol(NativeSession &Session, SymIndexId Id,
-                   const codeview::CVType &CV);
-  ~NativeEnumSymbol() override;
+  NativeTypeEnum(NativeSession &Session, SymIndexId Id,
+                 const codeview::CVType &CV);
+  ~NativeTypeEnum() override;
+
+  void dump(raw_ostream &OS, int Indent) const override;
 
   std::unique_ptr<NativeRawSymbol> clone() const override;
 
@@ -35,8 +37,8 @@ public:
   Error visitKnownMember(codeview::CVMemberRecord &CVM,
                          codeview::EnumeratorRecord &Record) override;
 
+  PDB_BuiltinType getBuiltinType() const override;
   PDB_SymType getSymTag() const override;
-  uint32_t getClassParentId() const override;
   uint32_t getUnmodifiedTypeId() const override;
   bool hasConstructor() const override;
   bool hasAssignmentOperator() const override;
@@ -45,9 +47,14 @@ public:
   std::string getName() const override;
   bool isNested() const override;
   bool hasOverloadedOperator() const override;
+  bool hasNestedTypes() const override;
+  bool isIntrinsic() const override;
   bool isPacked() const override;
   bool isScoped() const override;
   uint32_t getTypeId() const override;
+  bool isRefUdt() const override;
+  bool isValueUdt() const override;
+  bool isInterfaceUdt() const override;
 
 protected:
   codeview::CVType CV;
@@ -57,4 +64,4 @@ protected:
 } // namespace pdb
 } // namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMSYMBOL_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
