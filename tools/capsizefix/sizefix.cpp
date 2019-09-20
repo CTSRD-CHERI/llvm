@@ -89,6 +89,7 @@ int main(int argc, char *argv[]) {
               "Unexpected location for capability relocations section!\n");
       return EXIT_FAILURE;
     }
+    uint64_t offset = support::endian::read<uint64_t, support::big, 1>(entry + 16);
     auto SizeAndType = SymbolSizes.find(base);
     uint64_t Size = 0;
     bool isFunction = false;
@@ -98,7 +99,9 @@ int main(int argc, char *argv[]) {
       for (auto &Sec : Sections) {
         if (std::get<0>(Sec) < base &&
             (std::get<0>(Sec) + std::get<1>(Sec)) > base) {
-          Size = std::get<1>(Sec);
+	  Size = std::get<1>(Sec);
+	  offset = base + offset - std::get<0>(Sec);
+	  base = std::get<0>(Sec);
           isFunction = std::get<2>(Sec);
 #ifndef NDEBUG
           if (!isFunction && Verbose)
@@ -127,12 +130,16 @@ int main(int argc, char *argv[]) {
     uint64_t Perms = 0;
     if (isFunction)
         Perms |= (1ULL<<63);
+    uint64_t BigBase = support::endian::byte_swap<uint64_t, support::big>(base);
+    uint64_t BigOffset = support::endian::byte_swap<uint64_t, support::big>(offset);
     uint64_t BigSize =
         support::endian::byte_swap<uint64_t, support::big>(Size);
     uint64_t BigPerms =
         support::endian::byte_swap<uint64_t, support::big>(Perms);
     // This is an ugly hack.  object ought to allow modification
-    fseek(F, entry - MB.getBufferStart() + 24, SEEK_SET);
+    fseek(F, entry - MB.getBufferStart() + 8, SEEK_SET);
+    fwrite(&BigBase, sizeof(BigBase), 1, F);
+    fwrite(&BigOffset, sizeof(BigOffset), 1, F);
     fwrite(&BigSize, sizeof(BigSize), 1, F);
     fwrite(&BigPerms, sizeof(BigPerms), 1, F);
   }
